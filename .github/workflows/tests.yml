@@ -1,0 +1,18 @@
+name: public-release-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  public-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -r requirements-public.txt
+      - run: python -m compileall -q align trainer evaluation tests
+      - run: bash -n scripts/reproduce_public_audit.sh scripts/reproduce_public_smoke.sh
+      - run: python -m pytest -q tests/test_public_release.py

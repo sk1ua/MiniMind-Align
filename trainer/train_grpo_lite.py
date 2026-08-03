@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from align.rl_rules import (
+    PRECISION_CONTRACT_MODES,
     POST_STEP_KL_GATE_MODES,
     TRAINING_FORWARD_MODES,
     clipped_policy_diagnostic_terms,
@@ -34,6 +35,8 @@ from align.rl_rules import (
     parse_controlled_reward_pattern,
     reference_kl_values,
     rule_reward,
+    precision_contract_spec,
+    require_precision_contract,
     select_reference_kl_gate_stats,
     training_forward_uses_autocast,
 )
@@ -326,6 +329,7 @@ def post_update_kl_stats(
     replay_variant: str | None = None,
     step: int | None = None,
     attempt_index: int | None = None,
+    precision_contract: dict[str, object] | None = None,
 ) -> dict[str, float]:
     """Measure reference KL on every rollout used by one optimizer step."""
     values = []
@@ -389,6 +393,8 @@ def post_update_kl_stats(
                         "new_log_probs_sha256": hashlib.sha256(
                             json.dumps(new_values, separators=(",", ":")).encode("utf-8")
                         ).hexdigest(),
+                        "precision_contract": precision_contract,
+                        **(precision_contract or {}),
                     }
                     with replay_path.open("a", encoding="utf-8") as handle:
                         handle.write(json.dumps(replay_row, ensure_ascii=False, allow_nan=False) + "\n")
@@ -588,6 +594,12 @@ def main() -> None:
     parser.add_argument("--kl-guard-token-replay-path", type=Path)
     parser.add_argument("--post-step-kl-diagnostic-fp32", action="store_true")
     parser.add_argument("--post-step-kl-diagnostic-full-fp32", action="store_true")
+    parser.add_argument(
+        "--precision-contract-mode",
+        choices=sorted(PRECISION_CONTRACT_MODES),
+        default="legacy_compat",
+        help="explicit precision contract; legacy_compat preserves prior behavior",
+    )
     parser.add_argument("--pre-step-kl-diagnostic-fp32", action="store_true")
     parser.add_argument(
         "--training-forward-mode",
@@ -674,9 +686,26 @@ def main() -> None:
     reference.load_state_dict(torch.load(args.model_dir / f"{args.from_weight}_768.pth", map_location=device), strict=True)
     policy.to(device).train()
     reference.to(device).eval().requires_grad_(False)
-    optimizer = torch.optim.AdamW(policy.parameters(), lr=args.learning_rate)
     autocast_dtype = torch.bfloat16 if args.dtype == "bfloat16" else torch.float32
     use_autocast = device.type == "cuda" and args.dtype == "bfloat16"
+    precision_contract = precision_contract_spec(
+        args.precision_contract_mode,
+        args.training_forward_mode,
+        args.post_step_kl_gate_mode,
+        next(policy.parameters()).dtype,
+        next(reference.parameters()).dtype,
+        use_autocast=use_autocast,
+        post_step_kl_target_enabled=args.post_step_kl_target is not None,
+        post_step_kl_diagnostic_fp32=args.post_step_kl_diagnostic_fp32,
+        post_step_kl_diagnostic_full_fp32=args.post_step_kl_diagnostic_full_fp32,
+        pre_step_kl_diagnostic_fp32=args.pre_step_kl_diagnostic_fp32,
+        pre_step_loss_diagnostic_fp32=args.pre_step_loss_diagnostic_fp32,
+        pre_step_loss_replay_enabled=args.pre_step_loss_replay_path is not None,
+        microbatch_telemetry_enabled=args.microbatch_log_path is not None,
+        microbatch_gradient_telemetry_enabled=args.microbatch_gradient_norm,
+    )
+    require_precision_contract(precision_contract)
+    optimizer = torch.optim.AdamW(policy.parameters(), lr=args.learning_rate)
     training_use_autocast = training_forward_uses_autocast(args.training_forward_mode, use_autocast)
     fp32_post_step_required = (
         args.post_step_kl_diagnostic_fp32
@@ -684,6 +713,17 @@ def main() -> None:
     )
     output_dir = args.save_dir
     output_dir.mkdir(parents=True, exist_ok=True)
+    run_metadata = {
+        "schema_version": 1,
+        "run_id": output_dir.name,
+        "precision_contract": precision_contract,
+        **precision_contract,
+        "config": vars(args),
+    }
+    (output_dir / "run_metadata.json").write_text(
+        json.dumps(run_metadata, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
     microbatch_log_path = args.microbatch_log_path
     if microbatch_log_path is not None:
         if microbatch_log_path.exists():
@@ -888,6 +928,8 @@ def main() -> None:
                     "mode": args.mode,
                     "training_forward_mode": args.training_forward_mode,
                     "active_variant": active_variant,
+                    "precision_contract": precision_contract,
+                    **precision_contract,
                     "beta": args.beta,
                     "epsilon": args.epsilon,
                     "epsilon_high": args.epsilon_high,
@@ -969,6 +1011,8 @@ def main() -> None:
                 "category": row["category"],
                 "training_forward_mode": args.training_forward_mode,
                 "active_variant": active_variant,
+                "precision_contract": precision_contract,
+                **precision_contract,
                 "reward_source": reward_source,
                 "rule_reward_values": rule_reward_values,
                 "controlled_reward_values": reward_values if controlled_reward_pattern is not None else None,
@@ -1141,6 +1185,7 @@ def main() -> None:
                 device,
                 autocast_dtype,
                 use_autocast,
+                precision_contract=precision_contract,
             )
             pre_step_kl_fp32_no_autocast = post_update_kl_stats(
                 policy,
@@ -1148,6 +1193,7 @@ def main() -> None:
                 device,
                 torch.float32,
                 False,
+                precision_contract=precision_contract,
             )
             pre_step_gap_threshold = max(
                 1e-4,
@@ -1221,6 +1267,7 @@ def main() -> None:
                     replay_variant="bfloat16_autocast",
                     step=step,
                     attempt_index=attempt,
+                    precision_contract=precision_contract,
                 )
                 if fp32_post_step_required:
                     post_step_kl_float32 = post_update_kl_stats(
@@ -1234,6 +1281,7 @@ def main() -> None:
                         replay_variant="bfloat16_no_autocast",
                         step=step,
                         attempt_index=attempt,
+                        precision_contract=precision_contract,
                     )
                 if full_fp32_measurement_model is not None:
                     full_fp32_measurement_model.load_state_dict(policy.state_dict(), strict=True)
@@ -1248,6 +1296,7 @@ def main() -> None:
                         replay_variant="full_float32_no_autocast",
                         step=step,
                         attempt_index=attempt,
+                        precision_contract=precision_contract,
                     )
                 legacy_bfloat16_finite = finite_diagnostics({
                     key: float(value)
@@ -1322,6 +1371,8 @@ def main() -> None:
                     "run_id": output_dir.name,
                     "step": step,
                     "attempt_index": attempt,
+                    "precision_contract": precision_contract,
+                    **precision_contract,
                     "lr_multiplier": multiplier,
                     "pre_attempt_policy_state_digest": pre_attempt_policy_state_digest,
                     "pre_attempt_optimizer_state_digest": pre_attempt_optimizer_state_digest,
@@ -1442,6 +1493,8 @@ def main() -> None:
             "diagnostic_schema_version": 4 if args.pre_step_loss_diagnostic_fp32 else 2,
             "training_forward_mode": args.training_forward_mode,
             "active_loss_precision": args.training_forward_mode,
+            "precision_contract": precision_contract,
+            **precision_contract,
             "reward_source": "controlled_reward_pattern" if controlled_reward_pattern is not None else "rule_reward",
             "controlled_reward_override_enabled": controlled_reward_pattern is not None,
             "controlled_reward_pattern": controlled_reward_pattern,

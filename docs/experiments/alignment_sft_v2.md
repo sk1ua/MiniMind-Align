@@ -1,7 +1,7 @@
 # Alignment SFT v2 实验报告
 
-日期：2026-07-31  
-远端项目：`/home/sakuaikacn/minimind`  
+日期：2026-07-31
+远端项目：`.`
 GPU：NVIDIA L4；seed：42；冻结测试：`dataset/alignment_v1/splits/prompts_test.jsonl`，100 条。
 
 ## 数据与训练

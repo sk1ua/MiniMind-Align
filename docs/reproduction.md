@@ -1,6 +1,6 @@
 # 复现说明
 
-在 `/home/sakuaikacn/minimind`、Python 3.10 `.venv` 和可用 L4 上执行。所有长期任务放入 tmux；运行前确认磁盘至少剩余 30GB。
+在 `.`、Python 3.10 `.venv` 和可用 L4 上执行。所有长期任务放入 tmux；运行前确认磁盘至少剩余 30GB。
 
 ```bash
 bash scripts/reproduce_all.sh --dry-run
@@ -452,7 +452,7 @@ PYTHONPATH=. .venv/bin/python evaluation/audit_prestep_precision.py \
 Expected status is `TRAINING_AUTOCAST_PRECISION_SENSITIVE`. Four pre-step replay rows must validate against the persisted token terms, four micro-batch links, production-gradient isolation, two accepted gate attempts, twelve post-step replay rows, state continuity, and the reloaded step-2 checkpoint. The expected limitation warning is `ZERO_ADVANTAGE_KL_ONLY_SMOKE`; this run cannot establish nonzero-advantage clipping behavior or model quality.
 ## MM-E024 / MM-F032 opt-in FP32 training-forward smoke
 
-Run from `/home/sakuaikacn/minimind`:
+Run from `.`:
 
 ```bash
 bash scripts/run_fp32_training_forward_smoke.sh --dry-run
@@ -579,3 +579,193 @@ bash scripts/run_balanced_output_quality_audit.sh --run
 ```
 
 The wrapper refuses a non-empty output root and replays `results/experiments/rl_balanced_reward_coverage_smoke_20260802/` into `results/experiments/rl_balanced_output_quality_audit_20260802/audit/`. It writes `summary.json`, `category_summary.json`, `sample_diagnostics.jsonl`, `input_manifest.json` and `report.md`. The observed status is `OUTPUT_QUALITY_SIGNAL_SPARSE_DIAGNOSTIC`: coverage is complete and replay is exact, but validator pass is `2/32` and max-length hits are `20/32`. This is diagnostic only and does not authorize GPU training or model promotion.
+### MM-E032 / MM-F040 release preflight
+
+Run from the repository root after confirming that the v2 isolated manifests exist:
+
+```bash
+RL_RELEASE_GATE_ROOT=results/experiments/rl_release_gate_20260802_retry1 \
+RL_RELEASE_GATE_TMUX_SESSION=rl_release_gate_preflight_retry1_20260802 \
+bash scripts/run_rl_release_gate.sh --dry-run
+RL_RELEASE_GATE_ROOT=results/experiments/rl_release_gate_20260802_retry1 \
+RL_RELEASE_GATE_TMUX_SESSION=rl_release_gate_preflight_retry1_20260802 \
+bash scripts/run_rl_release_gate.sh --preflight
+```
+
+The preflight command uses GRPO seed 42, four steps, eight generations, 128 train prompts and 32 validation prompts. It requires `training_forward_mode=fp32_no_autocast` and `post_step_kl_gate_mode=fp32_no_autocast`; the active gate is still targeted at `0.005`, while bfloat16 remains shadow telemetry. The audited result was `PREFLIGHT_PASS`.
+
+### MM-E033 / MM-F041 formal matrix and frozen evidence
+
+After and only after the preflight decision is `PREFLIGHT_PASS`, run the formal matrix in its own non-empty root:
+
+```bash
+RL_RELEASE_GATE_ROOT=results/experiments/rl_release_gate_20260802_retry1 \
+RL_RELEASE_GATE_TMUX_SESSION=rl_release_gate_formal_retry1_20260802 \
+bash scripts/run_rl_release_gate.sh --formal
+```
+
+Then run the offline formal audit and the retained frozen evidence:
+
+```bash
+.venv/bin/python evaluation/audit_rl_release_gate.py \
+  --phase formal \
+  --run-dir results/experiments/rl_release_gate_20260802_retry1/formal \
+  --output-dir results/experiments/rl_release_gate_20260802_retry1/formal/audit_v2
+RL_RELEASE_GATE_ROOT=results/experiments/rl_release_gate_20260802_retry1 \
+RL_RELEASE_GATE_TMUX_SESSION=rl_release_gate_frozen_retry1_20260802 \
+bash scripts/run_rl_release_gate.sh --frozen-eval
+```
+
+The wrapper refuses a non-empty root/run directory or reused tmux session, records command/commit/environment/resource/exit metadata, runs one GPU task at a time, and preserves every checkpoint, validation history and failure log. Frozen evaluation is evidence only and does not participate in checkpoint selection or promotion. C-Eval is not part of this reproduction path.
+### MM-E034 / MM-F042 quality signal repair
+
+Run the audit in a fresh root:
+
+`QUALITY_SIGNAL_REPAIR_ROOT=results/experiments/quality_signal_repair_20260803_retry2 bash scripts/run_quality_signal_repair.sh --audit`
+
+The audit is expected to pass the native-v2 input contract and the prepare phase is expected to exit `4` when the fixed selector finds fewer than 96 rows for a target category. In the recorded run, `conciseness` had `80/96`; `quality_repair_train.jsonl`, baseline evaluation, SFT and candidate evaluation were intentionally not produced. Do not rerun with a mixed source or reduced quota without a new plan.
+### MM-E034 / MM-F042 authorized conciseness supplement and SFT smoke
+
+The original train manifest is preserved. Prepare the deterministic supplement and augmented manifest:
+
+` .venv/bin/python dataset/alignment_v2/prepare_conciseness_supplement_20260803.py --supplement-output results/inputs/quality_signal_repair_conciseness_supplement_16_20260803.jsonl --augmented-output results/inputs/quality_signal_repair_native_v2_train_manifest_1016_20260803.jsonl --summary-output results/inputs/quality_signal_repair_conciseness_supplement_16_20260803.json`
+
+Run the isolated audit and smoke with `QUALITY_SIGNAL_REPAIR_EXPECTED_NATIVE_TRAIN_COUNT=1016` and `QUALITY_SIGNAL_REPAIR_TRAIN_MANIFEST=results/inputs/quality_signal_repair_native_v2_train_manifest_1016_20260803.jsonl`. The recorded result is `QUALITY_REPAIR_PASS_DIAGNOSTIC`; it does not authorize automatic RL or default-model replacement.
+### MM-E035 / MM-F043 corrected-GRPO smoke
+
+Use a new root and the isolated candidate checkpoint:
+
+`QUALITY_REPAIR_GRPO_ROOT=results/experiments/quality_repair_corrected_grpo_smoke_20260803 QUALITY_REPAIR_GRPO_TMUX_SESSION=quality_repair_corrected_grpo_20260803 QUALITY_REPAIR_GRPO_FROM_WEIGHT=quality_repair_sft_seed42 QUALITY_REPAIR_GRPO_MODEL_DIR=results/experiments/quality_signal_repair_20260803_augmented_retry1/sft_repair_seed42/out scripts/run_quality_repair_corrected_grpo_smoke.sh --smoke`
+
+The wrapper uses a two-step GRPO smoke, FP32/no-autocast training and active post-step gate, while retaining bfloat16 shadow, token replay, state digests and checkpoint reload. The recorded audit is `CORRECTED_GATE_ACCEPTED_2_STEPS_DIAGNOSTIC`; it is plumbing-only, with a two-prompt validation result of `0/2`. Do not use the selected smoke checkpoint as a default model or as evidence for formal RL adoption.
+### MM-F044 precision attribution audit
+
+Run the offline audit into a fresh subdirectory:
+
+`CUDA_VISIBLE_DEVICES='' .venv/bin/python evaluation/audit_prestep_precision.py --experiment-root results/experiments/quality_repair_corrected_grpo_smoke_20260803 --output-dir results/experiments/quality_repair_corrected_grpo_smoke_20260803/prestep_precision_audit --run-name grpo_quality_repair_corrected_seed42`
+
+The recorded result is `TRAINING_AUTOCAST_PRECISION_SENSITIVE`; the fixed post-step comparison further classifies it as `BF16_MEASUREMENT_SENSITIVE`. This is an offline diagnostic only. Resolve or explicitly bound the precision semantics before any 4-step or formal RL expansion.
+
+### MM-E036 / MM-F045 explicit precision contract smoke
+
+Run the dry-run first, then the single smoke from the repository root:
+
+```bash
+scripts/run_precision_contract_smoke.sh --dry-run
+scripts/run_precision_contract_smoke.sh --smoke
+```
+
+The wrapper uses a fresh root `results/experiments/rl_precision_contract_smoke_20260803/`, the isolated Alignment v2 train/validation manifests, and the quality-repair candidate checkpoint. It requires `precision_contract_mode=no_autocast_v1`, `training_forward_mode=fp32_no_autocast`, `post_step_kl_gate_mode=fp32_no_autocast`, pre-step loss replay, token replay, full-FP32 shadow and micro-batch telemetry. It refuses an existing root or tmux session, records resources every 60 seconds, enforces an 1800-second wall limit, and runs `evaluation/audit_precision_contract.py` after the smoke.
+
+The recorded audit is `PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING`: 2/2 steps accepted, active/full-FP32 KL matched, replay and checkpoint reload passed, and the bfloat16 shadow remained warning-only. This is a diagnostic contract result; do not treat it as quality evidence or model promotion.
+### MM-E037 / MM-F046 four-step precision-contract diagnostic
+
+Run the dry-run before the single diagnostic:
+
+```bash
+scripts/run_precision_contract_4step.sh --dry-run
+scripts/run_precision_contract_4step.sh --diagnostic
+```
+
+The wrapper creates the fresh root `results/experiments/rl_precision_contract_4step_20260803/`, refuses an existing root or tmux session, uses the isolated Alignment v2 manifests and quality-repair candidate, records resources every 60 seconds, and enforces an 1800-second wall limit. It runs GRPO seed 42 for four steps with the same `no_autocast_v1` active loss/gate contract as the two-step smoke. The recorded audit is `PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING_4_STEPS`; use the final audit directory `precision_contract_audit_final/` for the preserved run because the first wrapper version pre-created its audit directory and exited before auditing.
+### MM-E038 / MM-F047 offline precision/quality audit
+
+Run the audit with CUDA disabled and a fresh output directory:
+
+```bash
+CUDA_VISIBLE_DEVICES='' .venv/bin/python evaluation/audit_precision_quality_4step.py \
+  --experiment-root results/experiments/rl_precision_contract_4step_20260803 \
+  --output-dir results/experiments/rl_precision_contract_4step_20260803/precision_quality_audit \
+  --run-name grpo_precision_contract_4step_seed42 \
+  --expected-steps 4
+```
+
+The audit does not load model weights. It checks active/full-FP32 KL agreement, pre-step precision telemetry, state/digest continuity, checkpoint reload, sample linkage, reward replay and the limited quality scope. The recorded status is `PRECISION_DIVERGENCE_PERSISTS_QUALITY_SCOPE_LIMITED_DIAGNOSTIC`; it is not a promotion or RL-quality result.
+### MM-E039 / MM-F048 quality evidence boundary audit
+
+Run with CUDA disabled and a fresh output directory:
+
+```bash
+CUDA_VISIBLE_DEVICES='' .venv/bin/python evaluation/audit_quality_evidence_boundary.py \
+  --quality-summary results/experiments/quality_signal_repair_20260803_augmented_retry1/quality_decision/summary.json \
+  --input-summary results/experiments/quality_signal_repair_20260803_augmented_retry1/input_audit/summary.json \
+  --rl-summary results/experiments/rl_precision_contract_4step_20260803/precision_quality_audit/summary.json \
+  --output-dir results/experiments/rl_precision_contract_4step_20260803/quality_evidence_boundary_audit
+```
+
+The audit is artifact-only and rejects non-empty output directories. It records the SFT quality boundary separately from the RL telemetry boundary. Expected status is `QUALITY_EVIDENCE_BOUNDARY_DEFINED_DIAGNOSTIC`; formal RL readiness and automatic GPU start remain false.
+### MM-E040 / MM-F049 corrected-GRPO quality evidence diagnostic
+
+Run the fresh-root dry-run and diagnostic wrapper:
+
+```bash
+scripts/run_rl_quality_evidence_diagnostic.sh --dry-run
+scripts/run_rl_quality_evidence_diagnostic.sh --diagnostic
+```
+
+The wrapper uses the isolated 128/32 Alignment v2 manifests and the isolated quality-repair candidate. It runs GRPO seed 42 for four steps with eight generations, eight-step accumulation, full balanced 32-row validation, the opt-in `no_autocast_v1` contract and active FP32/no-autocast gate. It refuses an existing root or run directory, records tmux/resource/command metadata, enforces a 3600-second limit, and runs both precision-contract and quality-evidence audits.
+
+Expected quality audit: `QUALITY_EVIDENCE_DIAGNOSTIC_COMPLETE`. In this run the source and selected checkpoint both scored `19/32`; this is directional evidence only and does not authorize formal RL or model replacement.
+### MM-E041 / MM-F050 zero-gain failure attribution audit
+
+Run the offline audit from a fresh output directory:
+
+```bash
+CUDA_VISIBLE_DEVICES='' .venv/bin/python evaluation/audit_rl_quality_failure_attribution.py \
+  --experiment-root results/experiments/rl_quality_evidence_corrected_grpo_20260803 \
+  --run-name grpo_quality_evidence_seed42 \
+  --output-dir results/experiments/rl_quality_evidence_corrected_grpo_20260803/quality_failure_attribution_audit_v3 \
+  --selected-step 2
+```
+
+The audit is artifact-only and rejects non-empty output directories. Expected status is `QUALITY_FAILURE_ATTRIBUTION_COMPLETE`; it compares source SFT and selected step-2 validation item IDs, aggregates failure reasons and reward-component coverage, and never starts a GPU task. The expected directional result is `19/32` versus `19/32`, with `13` stable failures and `19` stable passes.
+### MM-E042 / MM-F051 reward-input and validator-contract audit
+
+Run from a fresh output directory:
+
+```bash
+CUDA_VISIBLE_DEVICES= .venv/bin/python evaluation/audit_rl_reward_input_contract.py \
+  --experiment-root results/experiments/rl_quality_evidence_corrected_grpo_20260803 \
+  --run-name grpo_quality_evidence_seed42 \
+  --output-dir results/experiments/rl_reward_input_contract_audit_20260803
+```
+
+The audit refuses a non-empty output directory, validates the resolved manifest, replays chosen and generated responses through both `validate_record` and `rule_reward`, checks category-component routing, and reports prompt/family coverage and termination semantics. Expected status is `REWARD_INPUT_COVERAGE_LIMITED_DIAGNOSTIC`; it must not start a GPU task.
+### MM-E043 / MM-F052 Output-to-Validator mapping audit
+
+Run from a fresh output directory:
+
+```bash
+CUDA_VISIBLE_DEVICES= .venv/bin/python evaluation/audit_rl_output_validator_mapping.py \
+  --experiment-root results/experiments/rl_quality_evidence_corrected_grpo_20260803 \
+  --run-name grpo_quality_evidence_seed42 \
+  --output-dir results/experiments/rl_output_validator_mapping_audit_20260803
+```
+
+The audit refuses non-empty output directories, hashes the manifest/samples/validator/rule files, replays chosen and generated responses, and writes `summary.json`, `failure_cases.jsonl`, `input_manifest.json` and `report.md`. Expected status is `OUTPUT_VALIDATOR_MAPPING_CONSISTENT_LIMITED_DIAGNOSTIC`; no model is loaded and no GPU task starts.
+
+## MM-E044 / MM-F053 category-weighting audit
+
+From `.`, use the project environment and keep CUDA disabled:
+
+```bash
+CUDA_VISIBLE_DEVICES= .venv/bin/python evaluation/audit_rl_category_weighting.py \
+  --experiment-root results/experiments/rl_quality_evidence_corrected_grpo_20260803 \
+  --run-name grpo_quality_evidence_seed42 \
+  --output-dir results/experiments/rl_category_weighting_audit_20260803_v2
+```
+
+The audit refuses a non-empty output directory. Inputs are the resolved 128-row native-v2 train manifest, `samples.jsonl`, and `step_summaries.jsonl`. It writes `summary.json`, `group_summaries.jsonl`, and `report.md`; it does not load weights or start a GPU task. The archived implementation, test, summary and group-summary hashes are recorded in `results/task_state.json`.
+
+## MM-E045 / MM-F054 error-driven SFT and preference smoke
+
+From ., run the data audit and then a fresh-root smoke with scripts/run_error_driven_preference_repair.sh. The wrapper evaluates baseline, error-driven SFT, DPO and SimPO on the same 160 validation and 32 release rows. DPO save_interval equals max_steps so short runs produce a strict-reloadable checkpoint. Retry5 is QUALITY_METHODS_NOT_MET_NO_MODEL_CHANGE and does not authorize corrected-GRPO.
+
+
+## MM-E047 / MM-F056：复现入口
+
+1. 进入 `.` 并确认 `results/experiments/error_driven_preference_repair_20260803_retry6/method_comparison/summary.json` 的质量门禁结果。
+2. 使用独立的 error-driven SFT 候选和 `results/inputs/rl_data_isolation_train_128_20260801.jsonl`、`results/inputs/rl_data_isolation_validation_32_20260801.jsonl`。
+3. 运行 `scripts/run_rl_quality_evidence_diagnostic.sh --diagnostic` 可复现 4-step corrected-GRPO 诊断；审计输出位于该实验根目录的 `precision_contract_audit/` 与 `quality_evidence_audit/`。
+
+该命令只用于诊断，不代表正式 RL 放行；正式六 seed、多算法和默认权重替换仍需新的明确批准。

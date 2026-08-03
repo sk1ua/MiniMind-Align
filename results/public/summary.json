@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "project": "MiniMind-Align",
+  "release_type": "public_research_snapshot",
+  "source_commit": "307fd76",
+  "status": "DIAGNOSTIC_ONLY_NO_MODEL_CHANGE",
+  "default_model_changed": false,
+  "formal_rl_authorized": false,
+  "methods": [
+    {
+      "method": "baseline",
+      "full_validation": "48/160",
+      "release_slice": "13/32",
+      "status": "reference"
+    },
+    {
+      "method": "Error-driven SFT",
+      "full_validation": "79/160",
+      "release_slice": "19/32",
+      "status": "best diagnostic candidate"
+    },
+    {
+      "method": "DPO",
+      "full_validation": "79/160",
+      "release_slice": "19/32",
+      "status": "diagnostic candidate"
+    },
+    {
+      "method": "SimPO",
+      "full_validation": "76/160",
+      "release_slice": "19/32",
+      "status": "diagnostic candidate"
+    },
+    {
+      "method": "corrected-GRPO",
+      "full_validation": "",
+      "release_slice": "19/32",
+      "status": "no incremental gain over SFT source"
+    }
+  ],
+  "corrected_grpo": {
+    "scope": "32-row balanced release slice",
+    "source_sft_release": "19/32",
+    "selected_release": "19/32",
+    "validator_gain_over_source_sft": 0,
+    "accepted_steps": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "precision_contract": "PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING_4_STEPS",
+    "sample_count": 256,
+    "sample_linkage_ok": true,
+    "checkpoint_reload_ok": true
+  },
+  "public_artifact_policy": {
+    "weights_included": false,
+    "raw_data_included": false,
+    "full_generations_included": false,
+    "external_judge_included": false
+  }
+}

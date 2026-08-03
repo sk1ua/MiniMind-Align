@@ -1,0 +1,2 @@
+# Minimal CPU environment for public audit and smoke checks
+pytest>=8.0,<9.0

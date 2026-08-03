@@ -17,6 +17,11 @@ POST_STEP_KL_GATE_MODES = {
     "fp32_no_autocast",
 }
 
+PRECISION_CONTRACT_MODES = {
+    "legacy_compat",
+    "no_autocast_v1",
+}
+
 TRAINING_FORWARD_MODES = {
     "legacy_bfloat16_autocast",
     "fp32_no_autocast",
@@ -61,6 +66,120 @@ def training_forward_uses_autocast(mode: str, use_autocast: bool) -> bool:
     if mode not in TRAINING_FORWARD_MODES:
         raise ValueError(f"unsupported training forward mode: {mode}")
     return bool(use_autocast and mode == "legacy_bfloat16_autocast")
+
+
+def precision_contract_spec(
+    mode: str,
+    training_forward_mode: str,
+    gate_mode: str,
+    policy_parameter_dtype: object,
+    reference_parameter_dtype: object,
+    *,
+    use_autocast: bool,
+    post_step_kl_target_enabled: bool = False,
+    post_step_kl_diagnostic_fp32: bool = False,
+    post_step_kl_diagnostic_full_fp32: bool = False,
+    pre_step_kl_diagnostic_fp32: bool = False,
+    pre_step_loss_diagnostic_fp32: bool = False,
+    pre_step_loss_replay_enabled: bool = False,
+    microbatch_telemetry_enabled: bool = False,
+    microbatch_gradient_telemetry_enabled: bool = False,
+) -> dict[str, object]:
+    """Describe and validate the explicit precision contract.
+
+    This helper is pure: it only classifies caller-provided modes and dtypes.
+    The trainer remains responsible for fail-closed enforcement.  The
+    ``legacy_compat`` result is intentionally valid for every existing mode so
+    adding this metadata cannot change legacy training behavior.
+    """
+    if mode not in PRECISION_CONTRACT_MODES:
+        raise ValueError(f"unsupported precision contract mode: {mode}")
+    if training_forward_mode not in TRAINING_FORWARD_MODES:
+        raise ValueError(f"unsupported training forward mode: {training_forward_mode}")
+    if gate_mode not in POST_STEP_KL_GATE_MODES:
+        raise ValueError(f"unsupported post-step KL gate mode: {gate_mode}")
+
+    def dtype_name(value: object) -> str:
+        return str(value).replace("torch.", "")
+
+    policy_dtype = dtype_name(policy_parameter_dtype)
+    reference_dtype = dtype_name(reference_parameter_dtype)
+    active_loss_autocast = bool(
+        use_autocast and training_forward_mode == "legacy_bfloat16_autocast"
+    )
+    active_gate_autocast = bool(
+        use_autocast and gate_mode == "legacy_bfloat16_autocast"
+    )
+    if mode == "no_autocast_v1":
+        active_loss_variant = f"policy_{policy_dtype}_no_autocast"
+        active_gate_variant = f"policy_{policy_dtype}_no_autocast"
+        active_gate_source = "post_step_kl_float32"
+        active_loss_autocast = False
+        active_gate_autocast = False
+        errors = []
+        if training_forward_mode != "fp32_no_autocast":
+            errors.append("training_forward_mode_must_be_fp32_no_autocast")
+        if gate_mode != "fp32_no_autocast":
+            errors.append("post_step_kl_gate_mode_must_be_fp32_no_autocast")
+        if not post_step_kl_target_enabled:
+            errors.append("post_step_kl_target_required")
+        if not post_step_kl_diagnostic_fp32:
+            errors.append("post_step_kl_diagnostic_fp32_required")
+        if not post_step_kl_diagnostic_full_fp32:
+            errors.append("post_step_kl_diagnostic_full_fp32_required")
+        if not pre_step_kl_diagnostic_fp32:
+            errors.append("pre_step_kl_diagnostic_fp32_required")
+        if not pre_step_loss_diagnostic_fp32:
+            errors.append("pre_step_loss_diagnostic_fp32_required")
+        if not pre_step_loss_replay_enabled:
+            errors.append("pre_step_loss_replay_required")
+        if not microbatch_telemetry_enabled:
+            errors.append("microbatch_telemetry_required")
+        if not microbatch_gradient_telemetry_enabled:
+            errors.append("microbatch_gradient_telemetry_required")
+        valid = not errors
+    else:
+        active_loss_variant = (
+            "legacy_bfloat16_autocast"
+            if training_forward_mode == "legacy_bfloat16_autocast"
+            else "fp32_no_autocast"
+        )
+        active_gate_variant = (
+            "legacy_bfloat16_autocast"
+            if gate_mode == "legacy_bfloat16_autocast"
+            else "fp32_no_autocast"
+        )
+        active_gate_source = (
+            "post_step_kl_bfloat16"
+            if gate_mode == "legacy_bfloat16_autocast"
+            else "post_step_kl_float32"
+        )
+        errors = []
+        valid = True
+
+    return {
+        "precision_contract_version": "v1",
+        "precision_contract_mode": mode,
+        "policy_parameter_dtype": policy_dtype,
+        "reference_parameter_dtype": reference_dtype,
+        "active_loss_variant": active_loss_variant,
+        "active_gate_variant": active_gate_variant,
+        "active_gate_source": active_gate_source,
+        "active_loss_autocast_enabled": active_loss_autocast,
+        "active_gate_autocast_enabled": active_gate_autocast,
+        "legacy_bfloat16_shadow_variant": "policy_bfloat16_autocast",
+        "full_float32_shadow_variant": "full_float32_no_autocast",
+        "full_float32_shadow_only": True,
+        "precision_contract_valid": valid,
+        "precision_contract_errors": errors,
+    }
+
+
+def require_precision_contract(spec: dict[str, object]) -> None:
+    """Fail closed when an opt-in precision contract is not satisfied."""
+    if spec.get("precision_contract_valid") is not True:
+        errors = spec.get("precision_contract_errors") or ["unknown_contract_error"]
+        raise ValueError("precision contract invalid: " + ",".join(str(item) for item in errors))
 
 
 def rule_reward(category: str, prompt: str, response: str, metadata: dict[str, Any]) -> tuple[float, dict[str, float]]:

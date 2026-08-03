@@ -204,3 +204,112 @@
 - [x] MM-F039：完成 category/step/prompt 聚合与后续裁定；8/8 覆盖，validator `2/32`，max-length `20/32`，自然结束 `12/32`，replay mismatch 为 0；状态为 `OUTPUT_QUALITY_SIGNAL_SPARSE_DIAGNOSTIC`。
 
 当前状态：`DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。质量信号仍稀疏，不启动 formal RL、CISPO、三 seed、C-Eval 或冻结集，不修改 reward、optimizer 或默认模型。
+## MM-E032 / MM-F040：正式 RL 质量放行预检
+
+- [x] MM-E032：完成 GRPO seed=42、4 steps、八类 Alignment v2 隔离 manifest 的 corrected FP32 training-forward/post-step gate 预检；4/4 optimizer steps 接受，active FP32 gate 均不超过 0.005，checkpoint、token replay、样本关联和 state continuity 完整。
+- [x] MM-F040：完成预检审计，状态为 `PREFLIGHT_PASS`；validation validator `13/32`（门槛 `4/32`），max-length `6/256=2.34%`，natural-end `250/256=97.66%`，safety/termination 均 `4/4`，无 unresolved guard、NaN、OOM 或 digest mismatch。
+
+实验根目录为 `results/experiments/rl_release_gate_20260802_retry1/`；原计划目录中的首次 wrapper 失败（exit 127、GPU wall time 0）保留未覆盖。预检通过后才允许执行正式六 seed 诊断；本轮仍不等同于模型采用。
+
+## MM-E033 / MM-F041：正式 RL 六 seed与最终门禁
+
+- [x] MM-E033：完成 GRPO/CISPO seeds `42/43/44`，每个最多 32 steps；六个 run 均 `32/32` accepted，active FP32 gate 全部通过，无 backoff/rejection，checkpoint、replay、样本关联、state continuity 和独立 checkpoint reload 完整，exit code 均为 0。
+- [x] MM-F041：完成 corrected formal audit 与冻结集泛化证据审计；GRPO 和 CISPO 的 baseline/selected validator 均为 `13/32` 平均，平均增益均为 `0`，safety/termination drop 均为 `0` 个百分点，因而均未通过三 seed晋级门禁，状态为 `NOT_MET_NO_MODEL_CHANGE`。
+
+冻结集仅作泛化证据：baseline `50/100`，六个唯一 selected checkpoint 各 `51/100`，不参与 checkpoint 选择或晋级。预检、六个训练 run 和七个冻结评测共 GPU wall time `4763/14400` 秒；结束时 GPU `0 MiB`，磁盘可用 `83 GiB`，服务器保持 `RUNNING`。C-Eval 未重跑，默认模型未改变，旧 E009–E031 实验目录未修改。
+
+当前状态：`NOT_MET_NO_MODEL_CHANGE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。在获得新的独立裁定前，不替换默认模型。
+## MM-E034 / MM-F042：质量信号修复与 SFT 预检
+
+- [x] MM-E034：完成 native Alignment v2 输入、chosen validator replay、metadata 与 train/validation overlap audit；1,000/160 条输入契约通过，release slice 32/32。
+- [x] MM-F042：按固定 96/32 类别配额执行 fail-closed selector；`conciseness` 仅 80 条，故 `QUALITY_REPAIR_NOT_MET_NO_MODEL_CHANGE`，未启动 baseline/SFT/candidate GPU 任务。
+
+当前状态：`DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。默认模型、reward、RL optimizer、KL gate 和旧实验目录均未修改；下一步必须先裁定数据补齐或新的配额/source policy。
+## MM-E034 / MM-F042：补充 native v2 conciseness 与 SFT 质量修复
+
+- [x] MM-E034：补充 16 条 deterministic native v2 `conciseness` 数据；16/16 validator 通过，原始 manifest 未修改，augmented native train 为 1016 条。
+- [x] MM-F042：完成 576 条 repair SFT 数据、seed42 两 epoch smoke、baseline/candidate 回载评测和质量门禁；release `13/32 → 19/32`，full validation `48/160 → 78/160`，状态为 `QUALITY_REPAIR_PASS_DIAGNOSTIC`。
+
+当前状态：`DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。候选权重保持独立；不得自动替换默认模型。下一步最多另行裁定 corrected-GRPO 单 seed smoke，不直接扩展正式 RL/CISPO/多 seed。
+## MM-E035 / MM-F043：quality-repair candidate corrected-GRPO smoke
+
+- [x] MM-E035：使用独立 quality-repair SFT 候选运行 GRPO seed42、2 steps；FP32/no-autocast training forward 与 active post-step gate 均启用，2/2 optimizer steps accepted，checkpoint/replay/state continuity 完整。
+- [x] MM-F043：完成 corrected-gate audit；状态为 `CORRECTED_GATE_ACCEPTED_2_STEPS_DIAGNOSTIC`，同时保留 `LEGACY_BF16_SHADOW_DISAGREEMENT` 与 `PRESTEP_PRECISION_DIVERGENCE` 警告。
+
+当前状态：`DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。两条 validation 仅验证链路（`0/2`），不构成质量或泛化证据。下一步先裁定 precision warning 的审计范围；不启动 formal RL、CISPO、多 seed、C-Eval、冻结集或默认模型替换。
+## MM-F044：precision divergence attribution audit
+
+- [x] MM-F044：完成 CUDA-disabled same-token pre-step replay 与 post-step dtype 对照；pre-step audit=`TRAINING_AUTOCAST_PRECISION_SENSITIVE`，综合归因=`BF16_MEASUREMENT_SENSITIVE`。
+
+当前状态：`DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。两次 active FP32 更新均真实发生且通过 gate，但 bfloat16 与 full FP32 在两次 attempt 均超过 dtype-gap threshold，且一次 gate 结论不同。暂不启动 4-step/formal RL、CISPO、多 seed、C-Eval 或默认模型替换。
+
+## MM-E036 / MM-F045：显式 Precision Contract 与 corrected smoke
+
+- [x] MM-E036：实现默认兼容、opt-in `no_autocast_v1` precision contract；补充 fail-closed、run/step/micro/attempt/replay telemetry、审计器、wrapper 和单测。
+- [x] MM-F045：GRPO seed42 2-step smoke；2/2 active update accepted，active/full-FP32 KL 一致，12 replay rows、state continuity、checkpoint reload 和 JSON finite 检查通过。
+
+最终状态：`PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。active loss/gate 为同一 `policy_float32_no_autocast` variant；legacy bfloat16 仅 shadow 且仍有警告。不得据此启动 formal RL、CISPO、多 seed、C-Eval、冻结集或替换默认模型。
+## MM-E037 / MM-F046: four-step precision-contract continuation
+
+- [x] MM-E037: run the separately authorized GRPO seed-42 four-step diagnostic with explicit `no_autocast_v1` contract, active/full-FP32 shadow comparison, replay, state continuity and checkpoint reload.
+- [x] MM-F046: audit the four-step chain and preserve the `PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING_4_STEPS` result.
+
+Current status: `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Four accepted updates validate the corrected telemetry chain, not model quality or RL adoption. Persistent BF16 shadow/pre-step warnings and the two-prompt validation scope block formal expansion; default model remains unchanged.
+## MM-E038 / MM-F047: offline precision and quality-scope audit
+
+- [x] MM-E038: implement and run a CUDA-disabled precision/pre-step/quality-scope audit for the four-step contract artifact.
+- [x] MM-F047: classify persistent BF16/pre-step divergence and preserve the limited quality evidence.
+
+Current status: `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Active/full-FP32 agreement and artifact integrity pass, but pre-step disagreement counts are loss/KL/gradient `4/3/3`, and validation scope is only two records. No formal RL expansion or default-model change is authorized.
+## MM-E039 / MM-F048：质量证据边界审计
+
+- [x] MM-E039：完成 SFT quality-repair、native-v2 输入契约、4-step RL telemetry 的离线证据范围核对；未启动 GPU。
+- [x] MM-F048：明确 SFT 质量证据与 RL telemetry 证据分界。SFT 候选仅支持单 seed SFT 诊断；RL artifact 不支持质量/泛化/采用结论。
+
+当前状态：`QUALITY_EVIDENCE_BOUNDARY_DEFINED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。formal RL 未放行；下一步只能另行裁定 full 32-row validation 与 balanced category coverage 的 corrected-GRPO quality-evidence diagnostic，禁止自动启动或替换默认模型。
+## MM-E040 / MM-F049：corrected-GRPO 完整质量证据诊断
+
+- [x] MM-E040：完成 GRPO seed42、4 steps、128 train prompts、完整均衡 32 条 validation 的 corrected diagnostic；4/4 update accepted，checkpoint/replay/state continuity 完整。
+- [x] MM-F049：完成 precision 与 quality evidence audit。source SFT 与 selected checkpoint 均为 `19/32`，validator gain 为 0；安全、终止、自然结束、长度和重复 guard 通过。
+
+当前状态：`QUALITY_EVIDENCE_DIAGNOSTIC_COMPLETE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。完整 validation 证据不支持 RL 增益或正式放行；不得自动启动 CISPO、三 seed、C-Eval、冻结评测或替换默认模型。
+## MM-E041 / MM-F050：RL 零增益与失败路径归因审计
+
+- [x] MM-E041：在不启动 GPU 的前提下，读取 corrected-GRPO 4-step run 的 baseline/selected validation、samples、step reward telemetry，完成逐 prompt、category、failure reason 与 reward coverage 归因审计。
+- [x] MM-F050：确认 source SFT 与 selected checkpoint 在 32 条均衡 validation 上均为 `19/32`，`13` 条稳定失败、`19` 条稳定通过、无 changed item；失败集中于 reasoning arithmetic、format value/order、instruction count/duplicate、conciseness length/core-definition。
+
+当前状态：`QUALITY_FAILURE_ATTRIBUTION_COMPLETE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。256 条样本关联完整、每类 32 条；reward coverage 存在类别差异，但不能直接推出因果关系。GPU wall time 为 0 秒，服务器保持 `RUNNING`，不自动启动新的 RL 或更改默认模型。
+## MM-E042 / MM-F051：reward 输入覆盖与 validator contract 审计
+
+- [x] MM-E042：对 resolved native-v2 train manifest 与 corrected-GRPO 256 条 samples 做离线输入覆盖、reward replay、类别组件路由和结束语义核对。
+- [x] MM-F051：确认 chosen validator `128/128`，样本 reward/component replay 全部一致；但 prompt coverage 仅 `32/128`、family coverage `25/57`，且 `termination_reward` 是单行格式奖励而非 EOS 奖励。
+
+当前状态：`REWARD_INPUT_COVERAGE_LIMITED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。GPU wall time 为 0 秒，服务器保持 `RUNNING`。不修改 reward、不启动 formal RL；下一步需另行裁定 category weighting 或 output-validator mapping 审计。
+## MM-E043 / MM-F052：Output→Validator mapping 离线审计
+
+- [x] MM-E043：实现 output-validator mapping audit、failure case JSONL、metadata schema、component routing 和输入 hash 校验；新增 mapping 单测。
+- [x] MM-F052：完成 128 条 chosen 与 256 条生成样本 replay。dispatch、metadata、reward、component、validator 和 routing mismatch 均为 0；113 条失败归类为 structural `27` 或 semantic/value `86`。
+
+当前状态：`OUTPUT_VALIDATOR_MAPPING_CONSISTENT_LIMITED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。prompt coverage 为 `32/128`、family coverage 为 `25/57`；GPU wall time 为 0 秒，服务器保持 `RUNNING`。pytest 因服务器 `.venv` 未安装而未执行，py_compile 与端到端离线 audit 已通过；不修改 reward、不启动 formal RL。
+
+## MM-E044 / MM-F053: category exposure and advantage audit
+
+- [x] MM-E044: implement and run the CUDA-disabled category exposure/group-advantage audit; preserve the v1 output and use the corrected v2 aggregation.
+- [x] MM-F053: classify balanced category exposure with heterogeneous advantage signal; no reward/weight/model change and no formal RL launch.
+
+Result: `CATEGORY_EXPOSURE_BALANCED_ADVANTAGE_HETEROGENEOUS_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. All categories had `32` samples and `4` groups; six of 32 groups collapsed, with reasoning the weakest observed advantage signal.
+
+## MM-E045 / MM-F054: error-driven SFT and DPO/SimPO comparison
+
+- [x] MM-E045: audit native-v2 input, construct 599 error-driven SFT targets and 113 chosen/rejected pairs, run isolated SFT/DPO/SimPO smoke and strict reload.
+- [x] MM-F054: compare on 160 validation and 32 release rows. Best DPO was 51/160 and 15/32 versus baseline 48/160 and 13/32; release gain below 3, so corrected-GRPO is not authorized.
+
+Current status: QUALITY_METHODS_NOT_MET_NO_MODEL_CHANGE / DIAGNOSTIC_ONLY_NO_MODEL_CHANGE. Default weights remain unchanged.
+
+
+## MM-E047 / MM-F056：偏好修复后的 corrected-GRPO 质量证据
+
+- [x] MM-E047：完成 error-driven SFT/DPO/SimPO 长程对照；SFT 与 DPO 均为完整 validation `79/160`、release `19/32`，SimPO 为 `76/160`、release `19/32`，三者均通过质量 guard；最佳独立候选为 `error_driven_sft_seed42`。
+- [x] MM-F056：在最佳 SFT 候选上完成 GRPO seed42、4 steps、完整均衡 32 条 validation 的 corrected-GRPO diagnostic；4/4 update accepted，active FP32 gate、replay、state continuity、checkpoint reload 全部通过，但 selected checkpoint 与 source SFT 均为 `19/32`，增益为 `0`。
+
+最终裁定：`QUALITY_EVIDENCE_NO_INCREMENTAL_RL_GAIN_NO_MODEL_CHANGE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。error-driven SFT 证明输出质量可以通过监督/偏好修复改善，但当前 rule-reward corrected-GRPO 没有在独立 validation 上产生增量泛化收益；正式六 run RL 暂停，默认模型不变。legacy bfloat16 shadow/pre-step precision warning 保留为诊断限制。

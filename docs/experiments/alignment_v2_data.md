@@ -13,10 +13,10 @@
 
 ## SHA256
 
-- /home/sakuaikacn/minimind/dataset/alignment_v2/generated/new_train_pilot.jsonl: aa64c0da3a0dbf563de5afc8addb6f883a80c4f2d633dac77caed464d7b8f34c
-- /home/sakuaikacn/minimind/dataset/alignment_v2/generated/new_validation_pilot.jsonl: 3b5b40422b2c5b93545a0a56c749ac1a283d9267fef5c7b2564978a08c21815b
-- /home/sakuaikacn/minimind/dataset/alignment_v2/manifests/train_manifest.jsonl: 7ba72615cbe1b3ba67b10cae599ba23f5e508949a86e5b634acaa6e465a13ff2
-- /home/sakuaikacn/minimind/dataset/alignment_v2/manifests/validation_manifest.jsonl: 6992f20accf88e783a2e4cdc10f188a3635e7fa1362486b425d74118f2b0c341
+- ./dataset/alignment_v2/generated/new_train_pilot.jsonl: aa64c0da3a0dbf563de5afc8addb6f883a80c4f2d633dac77caed464d7b8f34c
+- ./dataset/alignment_v2/generated/new_validation_pilot.jsonl: 3b5b40422b2c5b93545a0a56c749ac1a283d9267fef5c7b2564978a08c21815b
+- ./dataset/alignment_v2/manifests/train_manifest.jsonl: 7ba72615cbe1b3ba67b10cae599ba23f5e508949a86e5b634acaa6e465a13ff2
+- ./dataset/alignment_v2/manifests/validation_manifest.jsonl: 6992f20accf88e783a2e4cdc10f188a3635e7fa1362486b425d74118f2b0c341
 
 ## 结论与限制
 

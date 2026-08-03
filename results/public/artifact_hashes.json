@@ -1,0 +1,14 @@
+{
+  "public_files": {
+    "results/public/summary.json": "229c0d3904d0e4826a7ee17e82f13ce9223e4a1421f4798a43b150f3c0bb43ff",
+    "results/public/metrics.csv": "380b69ea26fb88f7a3006f536a08bf39511a68315e309f51cca25a300400b408",
+    "results/public/limitations.md": "bc376029179a799a6904224a2354981c45e446ec6add3cbb56246eba7b628813"
+  },
+  "source_artifacts": {
+    "method_summary": "710f18aabe8fae5b65ce843e7aa87c12db49948de8b6c1c8811ddf8f21b18ba4",
+    "corrected_grpo_archive": "ef0f487d804f8e0838fb6fd9c562c7182efae0c7f3443419e797e72a768abbef",
+    "precision_summary": "563ba77eccf4731783e8933bec41d5c475d2ae16f7c0a85e9a8ab62c21a4558d",
+    "quality_summary": "08d6112ed8d95ee7616c563d7ea0cdba41b88bce0fbc31e70fbc357908148d6c"
+  },
+  "source_commit": "307fd76"
+}

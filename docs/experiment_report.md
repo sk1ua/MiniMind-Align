@@ -426,3 +426,114 @@ This stage was offline-only. It replayed the 8-row balanced Alignment v2 train m
 The output-quality signal remained sparse: validator pass was `2/32` (`0.0625`). Failure reasons were distributed across the category-specific validators rather than dominated by one parser failure. `max_new_tokens` occurred in `20/32` samples, natural end in `12/32`, and termination reward values varied between `0.0` and `0.1`. The resulting status is `OUTPUT_QUALITY_SIGNAL_SPARSE_DIAGNOSTIC`, not a training or model-quality result.
 
 No GPU task ran; GPU wall time was `0` seconds. No reward, optimizer, KL gate, checkpoint selection, weight or default model changed. The project remains `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`; formal RL expansion remains paused pending a separately approved quality/output decision.
+## 2026-08-02 MM-E032 / MM-F040: formal-RL release preflight
+
+The release preflight used the isolated Alignment v2 train/validation manifests and an explicit `fp32_no_autocast` training forward plus active post-step KL gate. GRPO seed 42 completed all four optimizer steps; all active FP32 gate means were within the `0.005` target, with no rejected step, unresolved guard, NaN, OOM or digest mismatch. Checkpoint reload, token replay, sample linkage and state continuity were complete.
+
+The preflight passed its quality gate: validation validator pass was `13/32` (minimum `4/32`), generated max-length hits were `6/256` (`2.34%`), natural ends were `250/256` (`97.66%`), and validation safety/termination were both `4/4`. The preflight status is `PREFLIGHT_PASS`, which authorized the formal diagnostic matrix but does not by itself authorize model adoption.
+
+The first requested experiment root contains a preserved wrapper failure (exit `127`, GPU wall time `0`); the successful rerun is isolated under `results/experiments/rl_release_gate_20260802_retry1/` and did not overwrite the failed artifact.
+
+## 2026-08-02 MM-E033 / MM-F041: six-seed formal RL diagnostic and final gate
+
+After the preflight passed, GRPO and CISPO were each run with seeds `42/43/44`, up to 32 steps, corrected FP32 active KL gating, and independent run directories. All six runs completed `32/32` accepted optimizer steps, wrote checkpoints and replay telemetry, and passed independent checkpoint reload/state-continuity checks. No backoff or rejected optimizer step occurred. The bfloat16 shadow continued to show precision disagreement in telemetry, but it did not control the corrected active gate.
+
+The final audit did not find a promotion signal. For both GRPO and CISPO, the baseline and selected validation means were `13/32`, giving `0` mean validator-pass gain; safety and termination drops were `0` percentage points and quality checks were acceptable. Therefore neither method passed the three-seed promotion gate, and the final status is `NOT_MET_NO_MODEL_CHANGE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`.
+
+The frozen 100-row evaluation was retained only as generalization evidence: baseline was `50/100`, while each of the six selected checkpoints was `51/100`. It was excluded from checkpoint selection and promotion. C-Eval was not rerun, the default model was not changed, and existing E009–E031 artifacts were preserved. Total GPU wall time for preflight, formal runs and frozen evaluation was `4763/14400` seconds; the server remains `RUNNING` and the L4 returned to idle.
+## 2026-08-03 MM-E034 / MM-F042: quality signal repair blocked at native-v2 selection
+
+The input audit passed for the fixed native Alignment v2 contract: 1,000 native train rows and 160 native validation rows were found; chosen validator replay was 1,000/1,000 and 160/160, the release slice was 32/32, metadata was complete, and train/validation ID, family and prompt overlap were all zero.
+
+The prescribed SFT selector was correctly fail-closed. It requires 96 rows in each target category, but native v2 contains only 80 `conciseness` rows. No v1 rows, fallback quota, or changed selection policy was used. Therefore no repair manifest was written, no baseline or candidate generation was run, and no SFT checkpoint was created. The final status is `QUALITY_REPAIR_NOT_MET_NO_MODEL_CHANGE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`; the default model and all prior experiment roots are unchanged.
+## 2026-08-03 MM-E034 / MM-F042: authorized native-v2 supplement and SFT quality-repair diagnostic
+
+The previous fail-closed selection was resolved by the explicitly authorized addition of 16 deterministic native-v2 `conciseness` rows. The original train manifest was not modified. The supplement passed its validator `16/16`, had no ID/family/prompt overlap, and produced an augmented native train manifest with `1,016` rows and `96` conciseness rows. The fixed selector then produced `576` repair examples with `576/576` chosen validator replay.
+
+The isolated seed-42 SFT smoke completed 72 optimizer steps (2 epochs × 36), and the candidate checkpoint reloaded strictly. Under the fixed greedy evaluation, baseline versus candidate was `48/160 → 78/160` on full v2 validation and `13/32 → 19/32` on the release slice. Safety improved `21/24 → 23/24`, termination improved `6/10 → 10/10`, max-length hits were `1/160 → 2/160`, natural end was `159/160 → 158/160`, and mean repeat-3gram increased only `0.00138`. All quality-repair criteria passed, so the diagnostic status is `QUALITY_REPAIR_PASS_DIAGNOSTIC`.
+
+This is a single-seed SFT diagnostic, not RL evidence and not model adoption. The candidate remains isolated; the default model, reward, RL optimizer, KL gate and prior experiment roots were not changed. A corrected-GRPO single-seed smoke may be separately planned, but formal RL/CISPO/multi-seed training is not started automatically.
+
+## 2026-08-03 MM-E036 / MM-F045：显式 Precision Contract 与 corrected smoke
+
+本轮新增了默认关闭的 `precision_contract_mode=no_autocast_v1`。该模式 fail-closed 要求 training forward、active post-step gate、pre-step replay、full-FP32 shadow 和 micro-batch telemetry 同时存在；`legacy_compat` 保持旧默认行为。run、step、micro-batch、attempt、pre-step replay 和 token replay 均记录了契约版本、实际参数 dtype、active variant、gate source 与 shadow-only 语义。
+
+唯一 GRPO seed-42、2-step smoke 完成 `2/2` accepted optimizer steps。实际 policy/reference 参数 dtype 均为 `float32`；active loss 与 active gate 都是 `policy_float32_no_autocast`，active source 为 `post_step_kl_float32`。两步 active gate mean 为 `0.0002541153` 和 `0.00000471584`，detached full-FP32 mean 完全一致，均低于 `0.005`；两次参数更新均非零，step-2 checkpoint 独立回载成功，state continuity 通过。
+
+12 条 token replay、4 个 variant groups、pre-step replay、sample linkage 和 JSON finite 检查均通过。legacy bfloat16 shadow mean 为 `0.7908137` 和 `0.0022447`，仍触发 `BF16_SHADOW_MEASUREMENT_WARNING`；该 shadow 没有参与 active loss、gate、backoff 或 checkpoint selection。GPU wall time 为 `26/1800` 秒，结束时 L4 `0 MiB`、约 `81 GiB` 可用、服务器保持 `RUNNING`。
+
+最终状态：`PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。这只证明显式 precision contract 与两步更新链路可回放，不证明质量、泛化或 RL 改进；不启动 4-step、formal RL、CISPO、多 seed、C-Eval 或冻结集，也不替换默认模型。
+## 2026-08-03 MM-E035 / MM-F043: corrected-GRPO smoke from the quality-repair candidate
+
+The authorized follow-up used the isolated quality-repair SFT checkpoint as both policy initialization and reference, with two GRPO optimizer steps, eight train prompts, two validation prompts, FP32/no-autocast training forward, and the explicit FP32/no-autocast post-step KL gate. Both optimizer steps were accepted at learning-rate multiplier `1.0`; active gate means were `0.0002541` and `0.000004716`, so no backoff or rollback was required. The step-2 checkpoint reloaded independently, token replay had 12 complete rows, sample linkage was complete, and state continuity from step 1 to step 2 passed.
+
+The diagnostic also confirms that precision remains material: legacy bfloat16 shadow post-step means were `0.7908` and `0.002245`, and the run emitted `LEGACY_BF16_SHADOW_DISAGREEMENT` plus `PRESTEP_PRECISION_DIVERGENCE`. The two validation prompts produced `0/2`; this is plumbing-only evidence and cannot support a quality, safety, generalization or RL-improvement claim. The audit status is `CORRECTED_GATE_ACCEPTED_2_STEPS_DIAGNOSTIC`; default weights and all prior experiment roots remain unchanged.
+## 2026-08-03 MM-F044: precision attribution audit
+
+The smoke artifacts were audited offline with CUDA disabled using same-token pre-step replay. All four replay rows were valid; sample linkage, shadow-gradient isolation, post-gate replay, state continuity and checkpoint reload remained intact. The audit classified the run as `TRAINING_AUTOCAST_PRECISION_SENSITIVE`: micro-batch loss/KL/gradient disagreements were `3/2/3`.
+
+Using the fixed dtype-gap threshold, both post-step attempts were bfloat16-sensitive. The bfloat16 and full-FP32 gate decisions disagreed once, while bfloat16-weights with autocast disabled matched the detached full-FP32 measurement on both attempts. Both active FP32 updates were accepted and had nonzero parameter deltas. This supports `BF16_MEASUREMENT_SENSITIVE`, not a proof that every historical training spike was caused only by dtype. No 4-step or formal RL run is authorized by this audit; the default model remains unchanged.
+## 2026-08-03 MM-E037 / MM-F046: four-step precision-contract continuation
+
+The separately authorized continuation used a fresh root and the same isolated Alignment v2 manifests and quality-repair candidate. GRPO seed 42 completed all four optimizer steps under `precision_contract_mode=no_autocast_v1`; active loss and active gate stayed on `policy_float32_no_autocast`, and each active post-step KL mean remained below `0.005`. No backoff, rejection or rollback occurred; all parameter updates were nonzero.
+
+The final offline audit reported `PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING_4_STEPS`: active and full-FP32 means matched on all four steps, replay was complete (`24` rows, `8` variant groups), state continuity and both checkpoints reloaded successfully, and JSON finite checks passed. Legacy bfloat16 shadow means remained materially different on all four steps, so the warning persists. The two-prompt validation scope is plumbing-only and cannot support a quality or RL-improvement claim.
+
+The training process exited `0` after `45` GPU seconds. The first automatic audit exit `1` was caused by a wrapper bug that pre-created the non-empty audit directory; its log is preserved, the wrapper was corrected, and an independent final audit exited `0` without rerunning GPU. L4 returned to `0 MiB`, approximately `81 GiB` remained available, the server stayed `RUNNING`, and the default model, reward, gate semantics and prior experiment roots were unchanged. Final status: `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`.
+## 2026-08-03 MM-E038 / MM-F047: offline precision and quality-scope audit
+
+A new CUDA-disabled JSON/JSONL audit replayed the four-step telemetry without loading a model. Active/full-FP32 post-step KL agreement, contract validity, state continuity, checkpoint reload, sample linkage and reward replay all passed. Pre-step loss/KL/gradient disagreement counts were `4/3/3`, and legacy BF16 shadow divergence persisted across all four steps.
+
+The artifact contains 16 training samples, all from `conciseness`; 5/16 passed the validator, 2/16 hit max length, 14/16 ended naturally, and mean repetition penalty was `0.0`. Validation history contains only two records, so these values are diagnostic plumbing evidence and cannot support quality, safety, generalization or RL-improvement claims. Final status: `PRECISION_DIVERGENCE_PERSISTS_QUALITY_SCOPE_LIMITED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. No GPU work, model load or default-model change occurred.
+## 2026-08-03 MM-E039 / MM-F048: quality evidence boundary
+
+The offline boundary audit separates two evidence classes. The isolated native-v2 SFT repair candidate is valid as a single-seed quality diagnostic: full validation improved from `48/160` to `78/160`, the release slice from `13/32` to `19/32`, safety and termination did not drop, checkpoint reload and sample linkage passed, and the repeat/length guards passed. This result remains isolated SFT evidence and is not attributed to RL.
+
+The four-step corrected-GRPO artifact is valid for active/full-FP32 telemetry integrity and BF16/pre-step precision diagnosis only. It contains 16 training samples and only 2 validation records; active/full-FP32 agreement and replay/state/checkpoint integrity passed, but BF16 shadow and pre-step disagreement remain (`loss/KL/gradient = 4/3/3`). It cannot support an RL quality, generalization or adoption claim.
+
+Status: `QUALITY_EVIDENCE_BOUNDARY_DEFINED_DIAGNOSTIC`, `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Formal RL remains paused. A separately approved corrected-GRPO quality-evidence diagnostic may use the full 32-row validation set with balanced category coverage; it must not start automatically.
+## 2026-08-03 MM-E040 / MM-F049: corrected-GRPO quality evidence diagnostic
+
+The separately authorized corrected-GRPO diagnostic completed all four seed-42 optimizer steps with the `no_autocast_v1` contract. Active and full-FP32 post-step KL agreed at every step and remained below `0.005`; there were no backoffs, rejected updates or rollbacks. Replay contained 96 rows in 32 complete groups, two checkpoints reloaded, and state continuity passed.
+
+The full balanced 32-row validation contained four examples per category. The source quality-repair SFT candidate and selected step-2 checkpoint both scored `19/32`; safety and termination were `4/4` for both, natural end was `32/32`, max-length hit was `0/32`, and mean repeat-3gram was `0.01326778125`. The diagnostic therefore shows no validator gain, despite complete evidence coverage.
+
+The BF16 shadow warning and pre-step precision divergence remain. Status: `QUALITY_EVIDENCE_DIAGNOSTIC_COMPLETE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The checkpoint remains isolated and is not a promoted RL model.
+## 2026-08-03 MM-E041 / MM-F050: zero-gain failure attribution audit
+
+The CUDA-disabled audit compared the source quality-repair SFT candidate with the selected step-2 corrected-GRPO checkpoint on the same balanced 32-row validation slice. The two outputs matched for every prompt: `19/32` stable passes and `13/32` stable failures, with zero changed items and zero validator gain. Failure counts were conciseness length/core-definition `2`, format value/order `4`, instruction count/duplicate `3`, and reasoning arithmetic `4`.
+
+The run contained 256 uniquely linked generated samples, with 32 samples per category and 64 per step. Reward coverage was heterogeneous: format validator/format components were `2/32`, reasoning validator/arithmetic coverage `1/32`, while repetition validator was `32/32`; termination and safety coverage also differed by category. These observations identify audit targets but do not prove causality. Warnings for BF16 shadow and pre-step precision divergence remain. Status: `QUALITY_FAILURE_ATTRIBUTION_COMPLETE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`; no GPU work, formal RL or model change was authorized.
+## 2026-08-03 MM-E042 / MM-F051: reward-input and validator-contract audit
+
+The offline audit replayed the resolved 128-row native-v2 train manifest and all 256 corrected-GRPO samples. The manifest had eight balanced categories (`16` rows each), non-empty metadata, no source mismatch and `128/128` chosen validator pass. Every sample key was unique and linked to its manifest; persisted reward and every persisted component matched fresh `rule_reward` replay exactly, with zero category-component contract mismatches.
+
+The diagnostic coverage is narrower than the manifest: generated samples cover `32/128` prompts and `25/57` families, although all eight categories have `32` samples. Category validator pass was conciseness `15/32`, format `2/32`, instruction `10/32`, reasoning `1/32`, repetition `32/32`, safety `26/32`, termination `27/32`, uncertainty `30/32`. All `256/256` samples ended with EOS and none hit max length, but `59` naturally ended samples received zero `termination_reward`; this confirms that the component is a non-empty single-line reward, not an EOS/natural-end reward.
+
+Status: `REWARD_INPUT_COVERAGE_LIMITED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. This is contract and coverage evidence, not causal proof and not authorization to change reward or start formal RL.
+## 2026-08-03 MM-E043 / MM-F052: Output-to-Validator mapping audit
+
+The CUDA-disabled audit checked the resolved 128-row native-v2 manifest and all 256 corrected-GRPO samples against the current validator dispatch and `rule_reward`. Manifest validator fields, category metadata schemas, chosen replay, sample linkage, persisted reward, persisted components and category-specific component routing were all consistent. Chosen replay was `128/128`; generated replay had zero reward, component, validator or routing mismatches.
+
+The 113 generated failures are therefore output-contract evidence in this artifact, not a wiring defect: 86 were classified as semantic/value failures and 27 as structural failures. Main reasons were reasoning arithmetic value `31`, format value/order `30`, instruction count/duplicate `22`, conciseness length/core definition `17`, safety marker `6`, termination constraint `5` and uncertainty structure `2`. Coverage remains limited to `32/128` prompts and `25/57` families. Status: `OUTPUT_VALIDATOR_MAPPING_CONSISTENT_LIMITED_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`.
+
+## 2026-08-03 MM-E044 / MM-F053: category exposure and advantage transmission audit
+
+This CUDA-disabled audit used the corrected v2 output directory `results/experiments/rl_category_weighting_audit_20260803_v2/`. It replayed 256 generated samples from the corrected GRPO seed-42 diagnostic, four step summaries, and 32 groups of eight. Category exposure was balanced: every category had 32 samples and four groups; linkage, group size, mixed-category and finite-value checks all passed. The earlier v1 audit directory is preserved; its category family-count presentation bug was not used for this decision.
+
+The group advantage calculation used the existing population-standard-deviation normalization (`std + 1e-4`). Signal was heterogeneous despite balanced exposure: 26/32 groups had nonzero spread and six groups collapsed. Reasoning had validator pass `1/32`, three collapsed groups, nonzero advantage rate `0.25`, and mean absolute advantage `0.1653`; conciseness was `15/32` with mean absolute advantage `0.8813`, and format was `2/32` with `0.6604`. Prompt/family coverage remained partial at `32/128` and `25/57`.
+
+Final status: `CATEGORY_EXPOSURE_BALANCED_ADVANTAGE_HETEROGENEOUS_DIAGNOSTIC` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The result does not establish a causal category-weighting problem and does not authorize reward changes, reweighting, formal RL, or default-model replacement. If more work is approved, expand prompt/family coverage or run a separately controlled weighting experiment with independent validation. GPU wall time was zero; L4 returned `0 MiB`, about `80 GiB` remained available, and the server stayed `RUNNING`.
+
+## 2026-08-03 MM-E045 / MM-F054: error-driven SFT and preference-method comparison
+
+Native-v2 data audit passed: 1016 chosen rows replayed as 1016/1016, with 599 error-driven SFT rows and 113 chosen/rejected pairs; train/validation ID, family and prompt leakage were zero. The first smoke exposed a DPO checkpoint-save edge case and is preserved as retry3; retry5 used save_interval equal to max_steps and SFT, DPO and SimPO all passed strict CPU reload.
+
+Common greedy evaluation on full 160 validation and 32 release rows: baseline 48/160 and 13/32; error-driven SFT 47/160 and 14/32; DPO 51/160 and 15/32; SimPO 48/160 and 15/32. DPO was best observed, but release gain was only plus 2, below the required plus 3. Status: QUALITY_METHODS_NOT_MET_NO_MODEL_CHANGE. No corrected-GRPO smoke follows; default model and RL contracts remain unchanged. Wall time was 348 seconds; final L4 0 MiB, disk about 78.7 GiB, server RUNNING.
+
+
+## MM-E047 / MM-F056：偏好修复与 RL 增量证据
+
+长程 error-driven SFT、DPO、SimPO 均在独立的 160 条 validation 与 32 条 release slice 上完成严格回载和质量审计。相对 baseline `48/160, 13/32`，SFT 与 DPO 为 `79/160, 19/32`，SimPO 为 `76/160, 19/32`；安全、终止、自然结束和截断 guard 通过，因此这些权重作为独立诊断候选保留。
+
+随后在最佳 SFT 候选上执行 4-step corrected-GRPO。4/4 更新被 FP32 no-autocast active gate 接受，precision contract、token replay、state continuity、checkpoint reload 和 256 条样本关联均完整；但 source SFT 与 selected RL checkpoint 都是 `19/32`，RL validator 增益为 `0`。结论是质量修复有效、当前 RL 没有增量泛化证据，正式六 seed RL 不放行，默认模型不改变。

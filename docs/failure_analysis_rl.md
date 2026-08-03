@@ -229,3 +229,98 @@ E031/F039 对 E030 的 32 个生成样本做了逐样本 validator replay，并�
 质量信号仍不足：validator pass 仅 2/32，失败原因分散；20/32 命中 `max_new_tokens`，自然结束只有 12/32。termination reward 已能观察到 0.0/0.1 的变化，说明信号路径可见，但不能把短 smoke 的输出质量当作泛化或训练收益。该结果不支持修改 reward、增加长度、调整 optimizer 或晋级 checkpoint。
 
 结论为 `OUTPUT_QUALITY_SIGNAL_SPARSE_DIAGNOSTIC`，最终状态仍为 `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`。下一步如继续，先单独裁定质量/output 方案；不启动 formal RL、CISPO、多 seed、C-Eval 或冻结集。
+## MM-E032 / MM-F040 release preflight
+
+The quality/output blocker identified by E031/F039 was cleared for entry into formal RL diagnostics, not for model adoption. Under the corrected FP32/no-autocast path, the preflight achieved validation `13/32`, training max-length hits `6/256` and natural ends `250/256`; active post-step KL stayed within `0.005` for all four accepted steps. Replay, checkpoint reload and state continuity were complete.
+
+The legacy bfloat16 shadow still disagreed with the active FP32 measurement on some steps. This remains a measurement warning and is not evidence that the model improved. The release decision was therefore `PREFLIGHT_PASS` with `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE` retained.
+
+## MM-E033 / MM-F041 formal RL result
+
+The six corrected-gate runs were operationally stable: each completed 32 accepted steps without backoff/rejection, and no safety or termination drop was observed. However, operational stability did not translate into validation improvement. GRPO and CISPO both retained a 13/32 baseline mean and a 13/32 selected-checkpoint mean, so the required three-seed average gain of at least three passes was absent.
+
+The frozen evidence (50/100 baseline versus 51/100 for every selected checkpoint) is directionally positive but too small and is explicitly excluded from checkpoint selection and promotion. The failure is a no-gain promotion result, not evidence of a safety regression or a resolved reward-hacking mechanism. Keep the default model unchanged and do not infer adoption from the frozen score.
+
+Final classification: `NOT_MET_NO_MODEL_CHANGE` and `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Any future RL work requires a separately approved hypothesis and must preserve the three-seed promotion gate.
+## 2026-08-03 MM-E034 / MM-F042 quality-repair decision
+
+This stage did not expose a new RL failure. The native-v2 input and validator contract passed, but the requested repair-data balance is not satisfiable from the locked source: `conciseness` has 80 available rows versus 96 required. Because the protocol forbids mixing legacy v1 data or silently lowering the quota, the selector returned `QUALITY_REPAIR_NOT_MET_NO_MODEL_CHANGE` and stopped before GPU work.
+
+This is a data-availability/plan-feasibility blocker, not evidence that SFT repair succeeds or fails. Do not infer candidate quality, validator improvement, or RL readiness from this stage. A future run needs a new explicit decision to add native-v2 rows or change the quota/source policy.
+## 2026-08-03 MM-E034 / MM-F042 quality-repair result
+
+The data-availability blocker was resolved with an explicitly authorized 16-row native-v2 conciseness supplement. The supplement was deterministic, validator-clean and split-isolated; the original manifest stayed unchanged. The SFT candidate improved the release slice by 6 validator passes and the full validation by 30 passes while meeting the safety, termination, length, natural-end and repetition guards.
+
+The result is still diagnostic: it is one SFT seed, uses programmatic supplement rows, and does not establish RL improvement or general adoption. The remaining quality weakness is visible in format (`0/32` for both baseline and candidate) and the repeat-3gram mean rose slightly, although within the fixed guard. Keep the candidate isolated and require a separately approved corrected-GRPO smoke before any RL expansion.
+## 2026-08-03 MM-E035 / MM-F043 corrected-GRPO smoke
+
+The candidate SFT checkpoint completed both requested GRPO smoke updates under the explicit FP32/no-autocast training and active post-step gate. This removes the immediate operational blocker for a two-step update path: both active gate means were below `0.005`, parameters changed, replay and checkpoint reload passed, and no rollback was needed.
+
+It does not resolve the precision attribution. The legacy bfloat16 post-step shadow was `0.7908` on step 1 versus an active FP32 mean of `0.0002541`, and the pre-step loss/KL telemetry also reported precision divergence. Because the gate is defined on the selected active FP32 mean, these are measurement/semantics warnings rather than a promotion result. The validation slice was only two prompts and scored `0/2`, so no quality conclusion is valid. Keep formal RL paused until the precision semantics are explicitly bounded; do not change reward, default weights or the three-seed promotion gate.
+## 2026-08-03 MM-F044 precision attribution
+
+The offline replay separates two observations. First, actual policy updates occurred: both accepted attempts had nonzero parameter deltas and the active FP32 gate passed. Second, the bfloat16 measurement path is unstable relative to the FP32 reference: both attempts exceeded the fixed dtype-gap threshold, and the first attempt would have rejected under the legacy bfloat16 mean while the active FP32 gate accepted it. The no-autocast bfloat16-weight measurement matched the detached full-FP32 measurement on both attempts.
+
+The evidence is therefore `BF16_MEASUREMENT_SENSITIVE` with `TRAINING_AUTOCAST_PRECISION_SENSITIVE` pre-step telemetry. It narrows the attribution but does not prove causality for all prior runs. Keep the production semantics and default model unchanged; do not use this two-step, two-prompt artifact to justify a longer or multi-seed RL run.
+
+## MM-E036 / MM-F045 precision contract result
+
+The explicit opt-in contract closes the semantics gap for the tested path: active training loss and active post-step gate use the same `policy_float32_no_autocast` variant, while legacy bfloat16 autocast and detached full-FP32 are shadow-only. Both accepted steps stayed below the active KL target and the active no-autocast mean matched the full-FP32 shadow exactly. This is evidence about measurement/telemetry semantics, not evidence that the underlying reward or optimizer is improved.
+
+The legacy bfloat16 shadow still diverged substantially on both attempts, so the warning is retained rather than silently treated as harmless. The smoke also used only two validation prompts and must not be used for quality, safety or generalization claims. Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`; any 4-step diagnostic requires a separate decision and must preserve the explicit contract and shadow warning.
+## MM-E037 / MM-F046: four-step precision-contract diagnostic
+
+The corrected contract remained operational for four accepted GRPO updates. Active policy loss and active post-step gate used the same no-autocast variant; active and detached full-FP32 KL means matched at every step and stayed below the `0.005` budget. There were no backoffs, rejected updates or rollbacks, and all four parameter deltas were nonzero.
+
+The BF16 shadow warning did not disappear: all four legacy bfloat16 means exceeded the fixed comparison threshold relative to the active measurement. This strengthens the conclusion that the legacy measurement path is not suitable as the authoritative gate for this opt-in contract, but it does not establish RL quality or explain all historical behavior. The two-prompt validation scope remains plumbing-only.
+
+Classification: `PRECISION_CONTRACT_PASS_WITH_BF16_SHADOW_WARNING_4_STEPS`, `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not expand to formal RL, CISPO, multi-seed training, C-Eval, frozen evaluation or default-model replacement from this result. Next work, if authorized, should be an offline audit of pre-step/training precision and quality evidence rather than another automatic GPU expansion.
+## MM-E038 / MM-F047: offline precision/quality evidence boundary
+
+The four-step offline replay confirms a stable active contract but not a clean precision path. Active and full-FP32 post-step KL agree, while pre-step loss, KL and gradient comparisons disagree on `4/3/3` steps and BF16 shadow divergence remains present. This is consistent with a persistent precision-semantics warning, not evidence that the active corrected update is a quality improvement.
+
+The generated evidence is narrow: 16 training samples are all from `conciseness`, with validator pass `5/16`; only two validation records exist. Max-length was `2/16`, natural end `14/16`, empty response `0/16`, and repetition penalty mean `0.0`. These counts must not be promoted to validation or RL quality claims. Status: `PRECISION_DIVERGENCE_PERSISTS_QUALITY_SCOPE_LIMITED_DIAGNOSTIC`. Keep formal RL paused and define a broader offline evidence boundary before any further GPU run.
+## 2026-08-03 MM-E039 / MM-F048 evidence boundary
+
+The SFT quality signal and the RL telemetry are not interchangeable. The quality-repair candidate has broad enough held-out coverage for a single-seed SFT diagnostic (`78/160` full, `19/32` release), with no safety/termination drop and complete reload/linkage evidence. The corrected-GRPO artifact is intentionally narrow: four accepted steps, 16 training samples and two validation records. Its precision evidence is useful, but it does not establish quality transfer or RL generalization.
+
+Persistent BF16 shadow and pre-step loss/KL/gradient divergence (`4/3/3`) remains a measurement/semantics warning. Do not attribute the SFT gain to RL, expand formal RL, or replace the default model. Any next GPU experiment must separately specify full validation coverage and balanced categories.
+## 2026-08-03 MM-E040 / MM-F049 corrected-GRPO quality evidence
+
+Expanding validation from two records to a balanced 32-row slice removed the previous quality-scope limitation, but did not produce a quality gain: selected corrected-GRPO matched the source SFT candidate at `19/32`. The safety, termination, length and repetition guards were stable, so the result is a clean directional no-gain diagnostic rather than a reward-hacking or checkpoint-integrity failure.
+
+Precision attribution is still limited. Active no-autocast and full-FP32 post-step KL agree, while legacy BF16 shadow and pre-step comparisons continue to disagree. This supports keeping the explicit opt-in contract for diagnostics, not claiming optimizer or RL improvement.
+## 2026-08-03 MM-E041 / MM-F050: zero-gain attribution
+
+The corrected-GRPO selected checkpoint did not change any of the 32 balanced validation decisions relative to the source SFT candidate: 13 prompts remained failures and 19 remained passes. The stable failures concentrate in reasoning arithmetic, format value/order, instruction count/duplicate handling and conciseness length/core-definition handling. This is a per-prompt/category localization of the no-gain result, not evidence of a causal reward-hacking mechanism.
+
+Reward-input coverage is uneven. Format and reasoning components are sparse (`2/32` and `1/32` validator coverage respectively), whereas repetition has `32/32` validator coverage and different termination/repetition exposure. Keep this as a diagnostic boundary; do not change `rule_reward`, the validator contract or the default model without a separately approved causal audit. BF16-shadow and pre-step precision warnings remain in force.
+## 2026-08-03 MM-E042 / MM-F051: reward-input coverage and termination semantics
+
+Fresh replay confirms that the current `rule_reward` implementation and persisted sample telemetry agree exactly. The task-specific component routing also matches category definitions. The limitation is coverage: the short corrected-GRPO run observes only 32 of 128 prompts and 25 of 57 families, so category-level rates cannot be generalized to the full train manifest.
+
+The audit also resolves a semantic ambiguity: `termination_reward` is awarded for a non-empty single-line response. It is not an EOS or natural-end reward. In this run all 256 samples ended naturally, yet 59 received zero termination reward because their response contained a newline. Do not reinterpret this as a generation-ending failure or change the reward without a separately approved contract decision.
+## 2026-08-03 MM-E043 / MM-F052: Output-to-Validator mapping
+
+The mapping audit found no validator/reward contract defect. The manifest `validator` field matched the category dispatch for all rows, required metadata was present, chosen outputs passed `128/128`, and every generated sample replayed to the persisted reward and components exactly. Category-specific routing also matched the intended component contract.
+
+The remaining failures are genuine output-contract observations within a partial single-seed sample: arithmetic/value and format/value failures dominate, followed by instruction count/duplicate, conciseness definition/length, safety markers, termination constraints and uncertainty structure. This does not establish a causal training diagnosis or justify changing `rule_reward`. The single-line interpretation of `termination_reward` remains explicit; it is not an EOS signal.
+
+## MM-E044 / MM-F053 category-weighting diagnostic
+
+The audit separates exposure from signal. The 256-sample run was balanced by category (`32` samples and `4` groups per category), with no sample linkage, mixed-group, group-size or JSON-finite errors. Existing GRPO group-advantage normalization was replayed offline. Six of 32 groups were reward-collapsed and 26 had nonzero spread.
+
+Reasoning is the weakest observed signal: validator `1/32`, three of four groups collapsed, and mean absolute advantage `0.1653`. Conciseness, format, instruction, safety and uncertainty had nonzero advantage rates of `1.0`; repetition and termination were partially collapsed. This is a heterogeneous-signal observation, not causal evidence that category weights caused the zero validator gain. Prompt coverage `32/128` and family coverage `25/57` remain limitations.
+
+The v1 audit output is retained because it exposed a family-count reporting defect; v2 corrected the category aggregation before archive. No reward, validator, optimizer, checkpoint rule or model was changed. The next allowable experiment is either broader offline coverage or an explicitly controlled category-weighting diagnostic; formal RL remains paused.
+
+## 2026-08-03 MM-E045 / MM-F054: preference repair did not clear the release gate
+
+The error-driven data construction is internally consistent, but the two-step preference smoke is not a promotion result. DPO gained three full-validation passes and two release passes; SFT lost one full pass and SimPO was flat. The missing third release pass means the improvement is not stable across the required independent slice. Keep DPO isolated and require a separately approved longer or better-covered preference experiment before revisiting RL.
+
+
+## MM-E047 / MM-F056：质量修复后 RL 仍无增量
+
+失败路径已从“输出契约质量不足”推进到“监督/偏好修复有效但 rule-reward GRPO 不再带来独立 validation 增益”。长程 SFT/DPO/SimPO 将 release slice 从 `13/32` 提升到 `19/32`，并消除截断、提高自然结束；corrected-GRPO 4-step 在相同来源模型上保持 `19/32`，没有 changed item。因而不能把训练 reward 或稳定的 optimizer telemetry 写成 RL 改进，也不能启动六 seed 晋级实验。
+
+保留的限制：这是单 seed、4-step 诊断；legacy bfloat16 shadow 与 active FP32 measurement 仍有分歧。所有结论均为诊断证据，不触发默认模型替换。

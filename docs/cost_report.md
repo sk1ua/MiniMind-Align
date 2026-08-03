@@ -204,3 +204,104 @@ No USD estimate is emitted because no new GPU or billing export was involved. Ex
 - This was a CUDA-disabled offline replay of E030. GPU wall time was `0` seconds; no model inference, formal RL, CISPO, C-Eval, frozen evaluation or Gemini call ran.
 - The wrapper recorded command, commit `4167a3dedff1c03d794402e04604e2eabe5cbcb5`, environment hash, resource snapshots, exit code `0` and an isolated audit root. No checkpoint or weight was written.
 - The server remains `RUNNING`, the L4 is idle at `0 MiB`, and approximately `90 GiB` remains available. No USD amount is inferred without a Cloud Billing export.
+## 2026-08-02 MM-E032 / MM-E033 / MM-F040 / MM-F041 release gate
+
+- Preflight GRPO seed 42: `121` GPU wall seconds.
+- Six formal GRPO/CISPO runs: `3964` GPU wall seconds total (`660–661` seconds per run); all exit codes were `0`.
+- Frozen evaluation of baseline plus six selected checkpoints: `678` GPU wall seconds total; all seven evaluations exited `0`.
+- Total recorded GPU wall time: `4763/14400` seconds, below the four-hour hard limit. The budget state is preserved at `results/experiments/rl_release_gate_20260802_retry1/budget_state.json`.
+- The initial requested-root wrapper failure exited `127` before GPU work and used `0` GPU wall seconds; its log is preserved separately and was not overwritten.
+- Final resources: L4 `0 MiB`, approximately `83 GiB` disk available, server `RUNNING`. No C-Eval or Gemini call ran in this stage. No USD amount is inferred without a Cloud Billing export.
+## 2026-08-03 MM-E034 / MM-F042 quality-repair cost
+
+- Input audit and fail-closed selection only; GPU wall time: `0/14400` seconds.
+- Baseline validation, SFT smoke and candidate validation: not run.
+- Final resources: L4 idle at `0 MiB`, approximately `83 GiB` disk available, server `RUNNING`.
+- No model weight or default model was changed. No USD cost is inferred without a Cloud Billing export.
+## 2026-08-03 MM-E034 / MM-F042 authorized supplement and SFT smoke
+
+- Supplement preparation and input/selection audit: GPU wall time `0` seconds.
+- Baseline validation: `71` seconds; SFT repair: `34` seconds; candidate validation: `68` seconds; total recorded GPU wall time `173/14400` seconds.
+- Final resources: L4 idle at `0 MiB`, approximately `82 GiB` disk available, server `RUNNING`.
+- The candidate checkpoint is retained only in its isolated experiment directory. The default model was not changed. No USD amount is inferred without a Cloud Billing export.
+## 2026-08-03 MM-E035 / MM-F043 corrected-GRPO smoke
+
+- One GRPO seed-42 smoke ran for 2 optimizer steps; recorded GPU wall time was `61/1800` seconds.
+- No backoff or rejected update occurred. The step-2 checkpoint and audit were written in a new root; no formal RL, CISPO, C-Eval, Gemini or frozen evaluation ran.
+- Final resources: L4 `0 MiB`, approximately `81 GiB` disk available, server `RUNNING`.
+- No USD amount is inferred without a Cloud Billing export; the candidate and default weights remain separate.
+## 2026-08-03 MM-F044 precision audit
+
+- Offline CUDA-disabled replay/audit only; GPU wall time: `0` seconds.
+- No new checkpoint, training task, benchmark, Gemini call or model change occurred.
+- Final resources remained L4 `0 MiB`, approximately `81 GiB` disk available, server `RUNNING`.
+
+## 2026-08-03 MM-E036 / MM-F045 precision contract smoke
+
+- Static implementation checks and 46 related regression tests used `0` GPU wall seconds.
+- One GRPO seed-42 smoke completed 2 optimizer steps in `26/1800` GPU wall seconds; no formal RL, CISPO, C-Eval, frozen evaluation or Gemini call ran.
+- Audit and checkpoint reload used no additional GPU time. Final L4 usage was `0 MiB`, approximately `81 GiB` remained available, and the server stayed `RUNNING`.
+- The output checkpoint remains isolated under `results/experiments/rl_precision_contract_smoke_20260803/`; no USD amount is inferred without a Cloud Billing export and no default weight was changed.
+## 2026-08-03 MM-E037 / MM-F046 four-step precision-contract diagnostic
+
+- Static checks, wrapper correction and offline audit used no GPU wall time beyond the recorded run.
+- One GRPO seed-42 run completed 4 optimizer steps in `45/1800` GPU seconds; the wrapper elapsed time was `60` seconds because of the 60-second resource-monitor interval.
+- The first automatic audit exited `1` due only to the wrapper pre-creating the non-empty audit directory. The failure log was retained, the wrapper was corrected, and the independent final audit exited `0` without rerunning GPU.
+- Final resources: L4 `0 MiB`, approximately `81 GiB` disk available, server `RUNNING`. No USD amount is inferred without a Cloud Billing export; no default weight was changed.
+## 2026-08-03 MM-E038 / MM-F047 offline precision/quality audit
+
+- CUDA-disabled JSON/JSONL audit only; GPU wall time: `0` seconds.
+- No model load, checkpoint write, benchmark, Gemini call or training task occurred.
+- Final L4 usage was `0 MiB`, approximately `81 GiB` disk available, server `RUNNING`.
+- No USD amount is inferred without a Cloud Billing export; no default weight changed.
+## 2026-08-03 MM-E039 / MM-F048 quality evidence boundary
+
+- Pure offline JSON/JSONL audit; no model load, checkpoint write or GPU work. GPU wall time: `0` seconds.
+- Final resources: L4 `0 MiB`, approximately `81 GiB` disk available, server `RUNNING`.
+- No Gemini call or benchmark ran. No USD amount is inferred without a Cloud Billing export; no default weight changed.
+## 2026-08-03 MM-E040 / MM-F049 corrected-GRPO quality evidence diagnostic
+
+- One GRPO seed-42 run completed four steps; recorded training GPU wall time was `97/3600` seconds and wrapper wall time was `120` seconds.
+- Precision and quality audits used no additional GPU work. Final L4 usage was `0 MiB`, approximately `80 GiB` disk available, server `RUNNING`.
+- No CISPO, multi-seed matrix, C-Eval, frozen evaluation or Gemini call ran. No USD amount is inferred without a Cloud Billing export; no default weight changed.
+## 2026-08-03 MM-E041 / MM-F050 failure attribution audit
+
+- Pure CUDA-disabled JSON/JSONL audit; no model load, checkpoint write or GPU training. GPU wall time: `0` seconds.
+- The audit processed 256 generated samples and 32 validation records. Existing incomplete audit directories were preserved; the final result used a fresh `quality_failure_attribution_audit_v3` directory.
+- Final resources: L4 `0 MiB`, approximately `80 GiB` disk available, server `RUNNING`.
+- No Gemini, benchmark or formal RL run occurred. No USD amount is inferred without a Cloud Billing export; no default weight changed.
+## 2026-08-03 MM-E042 / MM-F051 reward-input contract audit
+
+- CUDA-disabled offline audit only; no model load, checkpoint write or training. GPU wall time: `0` seconds.
+- Replayed 128 chosen records and 256 generated samples; no GPU, Gemini, benchmark or formal RL work occurred.
+- Final resources: L4 `0 MiB`, approximately `80 GiB` disk available, server `RUNNING`.
+- No USD amount is inferred without a Cloud Billing export; no default weight changed.
+## 2026-08-03 MM-E043 / MM-F052 Output-to-Validator mapping audit
+
+- CUDA-disabled artifact audit only; no model load, checkpoint write or training. GPU wall time: `0` seconds.
+- Audited 128 manifest rows and 256 generated samples; wrote 113 linked failure cases to a fresh directory.
+- Final resources: L4 `0 MiB`, approximately `80 GiB` disk available, server `RUNNING`.
+- No Gemini, benchmark or formal RL work occurred. No USD amount is inferred without a Cloud Billing export; no default weight changed.
+
+## MM-E044 / MM-F053 category-weighting audit
+
+- Execution: CUDA-disabled offline JSON/JSONL audit; no model load and no GPU task.
+- GPU wall time: `0` seconds; L4 after audit: `0 MiB`.
+- Disk after audit: approximately `80 GiB` available.
+- Server state: `RUNNING`.
+- Output root: `results/experiments/rl_category_weighting_audit_20260803_v2/`.
+- Existing v1 audit root and all prior experiment roots were preserved.
+- No new cloud training cost was incurred; billing was not inferred beyond the recorded zero GPU wall time.
+
+## 2026-08-03 MM-E045 / MM-F054 preference repair smoke
+
+- One fresh retry completed SFT, DPO, SimPO and common 160 plus 32 evaluation; the earlier checkpoint-save failure and logs were preserved.
+- Recorded phase wall time: 348 seconds; final L4 0 MiB; disk about 78.7 GiB; server RUNNING.
+- No Gemini, C-Eval, frozen evaluation, formal RL or default-weight replacement occurred; no USD amount is inferred without a billing export.
+
+
+## MM-E047 / MM-F056：偏好修复后 corrected-GRPO 成本
+
+- corrected-GRPO GPU wall time：约 `97` 秒；完成后 L4 为 0 MiB，服务器保持 `RUNNING`。
+- 本轮未运行 CISPO、三 seed、C-Eval 或冻结集；无新增外部评分器调用。
+- 结果目录独立保存，默认权重和既有实验目录未覆盖。
