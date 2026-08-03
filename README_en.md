@@ -21,4 +21,4 @@ bash scripts/reproduce_public_audit.sh
 bash scripts/reproduce_public_smoke.sh
 ~~~
 
-Weights, raw training data, full generations, and cloud credentials are intentionally excluded. The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) under Apache-2.0. See [docs/model_card.md](docs/model_card.md) and [results/public/limitations.md](results/public/limitations.md).
+Weights, raw training data, full generations, and cloud credentials are intentionally excluded. The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` under Apache-2.0; this README describes the MiniMind-Align research contribution. See [docs/upstream.md](docs/upstream.md), [docs/model_card.md](docs/model_card.md), and [results/public/limitations.md](results/public/limitations.md).

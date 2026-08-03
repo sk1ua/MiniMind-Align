@@ -1,5 +1,7 @@
 # MiniMind-Align model and experiment card
 
+This is the model card for the MiniMind-Align research snapshot, not the upstream MiniMind project. The base implementation is derived from upstream commit `307fd76`; attribution and license details are recorded in [upstream.md](upstream.md).
+
 ## Intended use
 
 This repository is intended for alignment research, experiment auditing, and educational reproduction. The released snapshot is not a production model distribution.

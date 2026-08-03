@@ -35,4 +35,4 @@ This repository presents an auditable alignment study rather than an unsupported
 
 ## Scope and attribution
 
-The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) and retains its Apache-2.0 licensing and attribution. See [docs/model_card.md](docs/model_card.md), [docs/limitations.md](docs/limitations.md), and [results/public/summary.json](results/public/summary.json).
+The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` and retains its Apache-2.0 licensing and attribution. This README describes MiniMind-Align's own research contribution; see [docs/upstream.md](docs/upstream.md), [docs/model_card.md](docs/model_card.md), [docs/limitations.md](docs/limitations.md), and [results/public/summary.json](results/public/summary.json).
