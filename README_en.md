@@ -21,4 +21,19 @@ bash scripts/reproduce_public_audit.sh
 bash scripts/reproduce_public_smoke.sh
 ~~~
 
-Weights, raw training data, full generations, and cloud credentials are intentionally excluded. The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` under Apache-2.0; this README describes the MiniMind-Align research contribution. See [docs/upstream.md](docs/upstream.md), [docs/model_card.md](docs/model_card.md), and [results/public/limitations.md](results/public/limitations.md).
+Model weights are distributed as [GitHub Release v0.1.0](https://github.com/sk1ua/MiniMind-Align/releases/tag/v0.1.0) assets rather than Git objects. Download and verify them with:
+
+~~~bash
+mkdir -p weights
+gh release download v0.1.0 --repo sk1ua/MiniMind-Align --pattern 'minimind-align-*-768.pth' --pattern 'SHA256SUMS.txt' --dir weights
+(cd weights && sha256sum -c SHA256SUMS.txt)
+~~~
+
+Run greedy inference with the best diagnostic SFT candidate:
+
+~~~bash
+python -m pip install torch transformers
+python scripts/run_release_inference.py --weight weights/minimind-align-error-driven-sft-seed42-768.pth --prompt "Explain caching in one sentence." --device cpu
+~~~
+
+Raw training data, full generations, optimizer state, and cloud credentials remain intentionally excluded. The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` under Apache-2.0; this README describes the MiniMind-Align research contribution. See [docs/release_weights.md](docs/release_weights.md), [docs/upstream.md](docs/upstream.md), [docs/model_card.md](docs/model_card.md), and [results/public/limitations.md](results/public/limitations.md).

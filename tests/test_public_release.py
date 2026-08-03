@@ -16,6 +16,10 @@ def test_public_tree_excludes_weights_and_runtime_state():
     forbidden_names = {".venv", ".venv-teacher", "checkpoints", "out"}
     forbidden_suffixes = {".pth", ".safetensors"}
     for path in ROOT.rglob("*"):
+        # Release users may download assets into this ignored runtime folder;
+        # the repository itself must still contain no tracked weight files.
+        if "weights" in path.relative_to(ROOT).parts:
+            continue
         assert path.name not in forbidden_names
         if path.is_file():
             assert path.suffix not in forbidden_suffixes
