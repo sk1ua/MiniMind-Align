@@ -16,4 +16,6 @@ Supervised and preference-based repair improved the measured quality slice. The 
 
 ## Limitations
 
-See [docs/limitations.md](limitations.md). The public repository excludes raw data, weights, and complete generation traces.
+See [docs/limitations.md](limitations.md). The Git repository excludes raw data,
+optimizer state, and complete generation traces; the curated state-dict weights
+are distributed separately in the [v0.1.0 GitHub Release](https://github.com/sk1ua/MiniMind-Align/releases/tag/v0.1.0).
