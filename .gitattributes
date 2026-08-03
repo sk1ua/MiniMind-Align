@@ -1,0 +1,6 @@
+* text=auto
+results/public/*.csv text eol=lf
+results/public/*.json text eol=lf
+results/public/*.md text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
