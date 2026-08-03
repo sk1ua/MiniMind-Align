@@ -9,6 +9,7 @@ docs-minimind/
 .venv-teacher/
 checkpoints/
 out/
+weights/
 *.pth
 *.safetensors
 results/experiments/
