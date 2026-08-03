@@ -1,0 +1,7 @@
+{
+  "seed": 42,
+  "train_counts": {"format": 200, "instruction": 200, "reasoning": 150, "safety": 150, "repetition": 100, "conciseness": 80, "termination": 60, "uncertainty": 60},
+  "validation_counts": {"format": 32, "instruction": 32, "reasoning": 24, "safety": 24, "repetition": 16, "conciseness": 12, "termination": 10, "uncertainty": 10},
+  "smoke_count_per_category": 3,
+  "similarity": {"sequence_matcher_threshold": 0.93, "jaccard_3gram_threshold": 0.90}
+}

@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+.DS_Store
+out
+website/
+docs-minimind/
+# MiniMind-Align public baseline excludes private data and experiment state
+.venv/
+.venv-teacher/
+checkpoints/
+out/
+*.pth
+*.safetensors
+results/experiments/
+results/inputs/
+results/*.json
+results/*.jsonl
+dataset/alignment_v2/generated/
+dataset/alignment_v2/manifests/
+dataset/alignment_v2/reports/
+.env
+.pytest_cache/
