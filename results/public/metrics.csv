@@ -1,0 +1,6 @@
+method,full_validation,release_slice,status
+baseline,48/160,13/32,reference
+Error-driven SFT,79/160,19/32,best diagnostic candidate
+DPO,79/160,19/32,diagnostic candidate
+SimPO,76/160,19/32,diagnostic candidate
+corrected-GRPO,,19/32,no incremental gain over SFT source

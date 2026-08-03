@@ -4,7 +4,7 @@ __pycache__/
 out
 website/
 docs-minimind/
-# MiniMind-Align public baseline excludes private data and experiment state
+# MiniMind-Align local runtime and private experiment artifacts
 .venv/
 .venv-teacher/
 checkpoints/
@@ -15,6 +15,8 @@ results/experiments/
 results/inputs/
 results/*.json
 results/*.jsonl
+!results/public/
+!results/public/**
 dataset/alignment_v2/generated/
 dataset/alignment_v2/manifests/
 dataset/alignment_v2/reports/

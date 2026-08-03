@@ -2,7 +2,7 @@
 
 MiniMind-Align 使用约 64M 参数 MiniMind decoder-only Transformer 建立低资源、可复现、可验证的指令对齐、偏好优化、Reward Model、GRPO/CISPO 与对齐税评测平台。当前 Sprint 为 A（Alignment v2 数据工程），先完成现场核验、实验冻结、smoke、pilot 和 fail-closed 审计。
 
-远端项目为 /home/sakuaikacn/minimind；服务器为 NVIDIA L4 24GB；MiniMind 环境为 .venv，教师/评审环境为 .venv-teacher；模型配置为 hidden_size=768、num_hidden_layers=8、约 63.91M 参数，训练优先使用 bfloat16。
+远端项目为 .；服务器为 NVIDIA L4 24GB；MiniMind 环境为 .venv，教师/评审环境为 .venv-teacher；模型配置为 hidden_size=768、num_hidden_layers=8、约 63.91M 参数，训练优先使用 bfloat16。
 
 ## 不可覆盖与数据泄漏
 

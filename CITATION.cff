@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: MiniMind-Align
+message: "Please cite this repository when using the public audit or reproduction artifacts."
+type: software
+authors:
+  - family-names: sk1ua
+    given-names: MiniMind-Align contributors
+url: https://github.com/sk1ua/MiniMind-Align
+license: Apache-2.0
+version: 0.1.0
+date-released: 2026-08-03

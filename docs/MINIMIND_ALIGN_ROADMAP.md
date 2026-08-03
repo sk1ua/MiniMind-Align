@@ -144,6 +144,13 @@ Next work is a read-only audit of the 26 recurring prompt identifiers and the fi
 - Next stage: add an explicit, default-off FP32/no-autocast training-forward/loss mode; first pass a nonzero-advantage contract test, then run at most one 2-step smoke. Do not tune optimizer scale around the precision artifact or proceed to 4-step/CISPO/three-seed expansion yet.
 - State remains `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`; server remains `RUNNING`, L4 idle.
 
+## MM-E036 / MM-F045 precision contract checkpoint
+
+- Implemented `legacy_compat` (default) and opt-in `no_autocast_v1`; incomplete opt-in configuration fails closed before optimizer steps.
+- The 2-step GRPO smoke accepted both updates with active no-autocast and full-FP32 KL means under `0.005`; replay, digest continuity and checkpoint reload passed.
+- Keep the bfloat16 shadow divergence as an explicit warning. Do not infer that a corrected gate is a model improvement or start 4-step/formal RL automatically.
+- Next possible work is a separately approved 4-step diagnostic only if it keeps the same contract, retains shadow telemetry and remains diagnostic-only. Formal multi-seed RL still requires the existing three-seed promotion gate.
+
 ## MM-E026 / MM-F034 decision (2026-08-02)
 
 - Controlled nonzero-advantage GRPO seed-42 active-path smoke passed 2/2 accepted steps with the explicit FP32/no-autocast training-forward and gate; parameter deltas, replay linkage, state continuity and checkpoint reload passed.
@@ -190,3 +197,76 @@ Keep the project at `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The next decision is an o
 The offline output-quality audit confirms that E030's balanced sampling and replay linkage are sound: category/family/prompt coverage is `8/8`, source chosen validation is `8/8`, and persisted reward/component replay is exact. It also shows that the live quality signal is sparse (`2/32` validator pass), with prevalent `max_new_tokens` hits (`20/32`) and natural end only `12/32`.
 
 Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. This evidence is insufficient for a reward or optimizer change and does not justify formal RL expansion. A future quality/output intervention must be separately specified and audited before any multi-seed training, C-Eval or frozen evaluation.
+## 2026-08-02 MM-E032–MM-E033 release gate decision
+
+The corrected FP32/no-autocast quality preflight passed: validator `13/32`, max-length hit rate `2.34%`, natural-end rate `97.66%`, and all four active KL-gated updates were accepted. This allowed the planned formal diagnostic matrix.
+
+The formal GRPO/CISPO six-seed matrix completed operationally, but both methods had zero mean validator gain over the 13/32 baseline. Frozen evidence was nearly unchanged (`50/100` baseline versus `51/100` for each selected checkpoint) and is not a promotion metric. The final state is `NOT_MET_NO_MODEL_CHANGE` / `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`.
+
+Do not replace the default model and do not infer adoption from the frozen score. C-Eval was not rerun. Future work needs a separately approved hypothesis focused on validator/generalization gain; it must preserve independent seeds, validation/checkpoint selection, safety/termination gates and the no-model-change default until the three-seed promotion condition is met.
+## 2026-08-03 MM-E034 / MM-F042 decision
+
+- The native-v2 quality audit passed, but the fixed 576-row repair selector is infeasible: `conciseness=80` while the target is 96.
+- The run failed closed before GPU work; no SFT candidate, RL run, benchmark or default-model change occurred.
+- Keep `QUALITY_REPAIR_NOT_MET_NO_MODEL_CHANGE` and `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The next work item requires an explicit data/quota decision; do not silently mix v1 data or lower the target.
+## 2026-08-03 MM-E034 / MM-F042 final decision
+
+- The explicitly authorized 16-row native-v2 conciseness supplement closed the fixed SFT selector gate without changing the original manifest.
+- The isolated SFT candidate passed the quality-repair diagnostic: release `19/32` versus baseline `13/32`, full validation `78/160` versus `48/160`, and all safety/termination/length/repetition guards passed.
+- Keep `QUALITY_REPAIR_PASS_DIAGNOSTIC` and `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The only next GPU action that may be planned is a separate corrected-GRPO single-seed smoke; do not start formal RL, CISPO or multi-seed training automatically.
+## 2026-08-03 MM-E035 / MM-F043 decision
+
+- The isolated quality-repair candidate passed the corrected two-step GRPO plumbing smoke: active FP32 gate accepted `2/2`, replay/state continuity/checkpoint reload passed, and no backoff was needed.
+- The run still reports legacy bfloat16 shadow disagreement and pre-step precision divergence. The two-prompt validation result (`0/2`) is not quality evidence.
+- Keep `CORRECTED_GATE_ACCEPTED_2_STEPS_DIAGNOSTIC` and `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not launch formal RL or multi-seed/CISPO training until the precision warnings are explicitly audited or bounded; default model stays unchanged.
+## 2026-08-03 MM-F044 decision
+
+- Same-token replay confirms `TRAINING_AUTOCAST_PRECISION_SENSITIVE`; both attempts are bfloat16-sensitive, and one legacy-vs-active gate decision disagrees.
+- The no-autocast bfloat16-weight measurement matches full FP32 on both attempts, while both active FP32 updates are nonzero and accepted.
+- Classify as `BF16_MEASUREMENT_SENSITIVE`, keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`, and pause before 4-step/formal RL. The next plan must either bound the precision semantics or add an explicit corrected measurement contract.
+## MM-E037 / MM-F046 precision-contract continuation
+
+The four-step continuation validates the corrected active loss/gate chain beyond the two-step smoke: `4/4` updates were accepted, active/full-FP32 KL agreed, replay and state continuity were complete, and two checkpoints reloaded. Persistent BF16 shadow and pre-step divergence remain warnings, while validation still covers only two prompts.
+
+Keep the project at `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. The next action is not formal RL expansion. If more work is authorized, first perform an offline precision/quality audit and define its acceptance scope; do not start CISPO, multi-seed training, C-Eval, frozen evaluation or default-model replacement from this diagnostic.
+## MM-E038 / MM-F047 offline precision/quality evidence boundary
+
+The offline audit confirms that the four-step active contract is internally complete, but pre-step precision divergence persists and the quality artifact is too narrow for model conclusions. Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Before any additional GPU work, define a broader offline evidence boundary; do not start formal RL, CISPO, multi-seed training, C-Eval, frozen evaluation or default-model replacement.
+## 2026-08-03 MM-E039 / MM-F048 quality evidence boundary
+
+The isolated SFT repair result is sufficient for a single-seed SFT quality diagnostic but cannot be used as RL evidence. The corrected-GRPO four-step result remains telemetry-only because its quality scope is 16 training samples plus two validation records and precision divergences persist.
+
+Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not launch formal RL, CISPO, multi-seed training, C-Eval, frozen evaluation or default-model replacement. The next allowable action is a separately approved corrected-GRPO quality-evidence diagnostic using the full 32-row validation set and balanced category coverage.
+## 2026-08-03 MM-E040 / MM-F049 corrected-GRPO quality evidence
+
+The full balanced 32-row diagnostic completed operationally and removed the prior two-record scope limitation. It still showed zero validator gain (`19/32` source SFT versus `19/32` selected corrected-GRPO), while safety/termination and output-quality guards remained stable. Precision BF16-shadow/pre-step warnings persist.
+
+Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not launch formal RL, CISPO, three-seed promotion, C-Eval, frozen evaluation or default-model replacement. Any future RL plan must explicitly address the zero-gain result and preserve the active precision contract.
+## 2026-08-03 MM-E041 / MM-F050 zero-gain attribution decision
+
+The full balanced corrected-GRPO diagnostic is now followed by an offline per-prompt/category attribution audit. The selected checkpoint exactly matches the source SFT candidate on all 32 validation items; failures are localized to conciseness, format, instruction and reasoning paths, while reward-component coverage is uneven. This is a diagnostic localization, not causal proof.
+
+Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not start formal RL, CISPO, multi-seed promotion, C-Eval, frozen evaluation or default-model replacement automatically. A future plan, if explicitly approved, should first decide between auditing reward-input/category coverage and auditing the output-to-validator mapping; it must retain independent validation and the precision contract.
+## 2026-08-03 MM-E042 / MM-F051 reward-input contract decision
+
+The reward contract is internally reproducible: chosen validator replay is `128/128`, generated reward/component replay has zero mismatches, and category routing is consistent. The evidence boundary is still limited because the 256 short-run samples cover only `32/128` prompts and `25/57` families. `termination_reward` should be interpreted as a single-line format guard, not an EOS guard.
+
+Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. No reward or optimizer modification follows from this audit. Before any GPU work, explicitly choose between a category-weighting audit and an output-to-validator mapping audit; preserve independent validation and the precision contract.
+## 2026-08-03 MM-E043 / MM-F052 Output-to-Validator mapping decision
+
+The output/validator mapping is internally consistent: all chosen rows pass, all generated reward and component replay matches, and category dispatch/metadata checks pass. The remaining failures are output-contract failures in a partial prompt/family sample, not evidence of reward wiring corruption. Keep the observed single-line `termination_reward` semantics separate from EOS telemetry.
+
+Keep `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`. Do not change reward, start formal RL, expand seeds, run C-Eval or replace the default model. Any future quality intervention must be separately approved and must expand independent prompt/family coverage.
+
+## MM-E044 / MM-F053: category signal boundary
+
+Category exposure is balanced in the observed corrected-GRPO artifact, but group advantage is heterogeneous and family/prompt coverage is incomplete. This does not justify a weighting change or formal RL expansion. The next decision point is broader prompt/family coverage or a separately controlled weighting experiment with independent validation, while preserving `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`.
+
+## 2026-08-03 decision: preference repair before RL
+
+Use the sequence negative RL, error-driven SFT, DPO or SimPO, full validation and release gate, corrected-GRPO only after stable gain, and three-seed RL last. DPO reached 51/160 and 15/32 versus baseline 48/160 and 13/32, but failed the plus-three release gate. Keep DIAGNOSTIC_ONLY_NO_MODEL_CHANGE; do not launch corrected-GRPO automatically.
+
+
+## MM-E047 / MM-F056：路线裁定
+
+错误驱动 SFT/DPO/SimPO 已完成质量修复路径，corrected-GRPO 4-step 仅验证训练器和 precision contract 的可运行性，没有带来 validation 增益。路线暂时停在 `DIAGNOSTIC_ONLY_NO_MODEL_CHANGE`：保留候选与完整证据，暂停正式 RL；下一次 RL 必须提出独立、可证伪的优化/奖励假设并重新注册验证门禁。
