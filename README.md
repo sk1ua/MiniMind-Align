@@ -4,7 +4,7 @@
 
 ## 项目简介
 
-MiniMind-Align 在 MiniMind 基础上构建了一套可审计的 Alignment 实验流程，覆盖数据隔离、validator/reward replay、错误驱动 SFT、DPO、SimPO、corrected-GRPO、KL/precision telemetry 和 checkpoint 回载检查。
+MiniMind-Align 在 MiniMind 基础上构建了一套可审计的 Alignment 实验流程，覆盖数据隔离、validator/reward replay、错误驱动 SFT、DPO、SimPO、corrected-GRPO、KL/precision telemetry 和 checkpoint 回载检查。模型侧以纯 PyTorch 实现 RMSNorm、RoPE（含 YaRN）、GQA、SwiGLU/MLP、KV Cache 等关键模块，逐模块的代码位置与核心公式见 [docs/module_code_map.md](docs/module_code_map.md)。
 
 本项目的核心价值不是宣称 RL 成功，而是用独立 validation 证据区分“输出质量修复”和“RL 泛化收益”。
 
