@@ -61,4 +61,6 @@ This repository presents an auditable alignment study rather than an unsupported
 
 ## Scope and attribution
 
-The base MiniMind implementation is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` and retains its Apache-2.0 licensing and attribution. This README describes MiniMind-Align's own research contribution; see [docs/release_weights.md](docs/release_weights.md), [docs/upstream.md](docs/upstream.md), [docs/model_card.md](docs/model_card.md), [docs/limitations.md](docs/limitations.md), and [results/public/summary.json](results/public/summary.json).
+本项目基于开源项目 [MiniMind](https://github.com/jingyaogong/minimind)（commit `307fd76`，Apache-2.0）构建，并保留其许可与署名。仓库中保留的上游组件包括：模型架构实现（`model/`，含 RMSNorm/RoPE/GQA/SwiGLU/KV Cache）、tokenizer、`dataset/lm_dataset.py` 数据加载，以及预训练/SFT/LoRA/DPO/SimPO/Reward 的基础训练循环（均在 `trainer/`，经本项目的错误驱动数据与审计流程改造）。上游其余与本研究的对齐管线无关的组件（agent/蒸馏/PPO 训练、tokenizer 训练、原版 GRPO 实现、通用 Web Demo、OpenAI API 服务等）已被移除；本项目的修正版 RL 实现为 `trainer/train_grpo_lite.py`。
+
+The base is derived from [jingyaogong/minimind](https://github.com/jingyaogong/minimind) at commit `307fd76` under Apache-2.0; see [docs/upstream.md](docs/upstream.md) for component-level provenance, and [docs/release_weights.md](docs/release_weights.md), [docs/model_card.md](docs/model_card.md), [docs/limitations.md](docs/limitations.md), [results/public/summary.json](results/public/summary.json) for release details.
