@@ -1,0 +1,8 @@
+{
+  "weight": "grpo",
+  "data": "dataset\\alignment_v2\\generated\\sft_validation_pilot.jsonl",
+  "batches": 20,
+  "supervised_tokens": 4658,
+  "loss": 0.8280644625425339,
+  "perplexity": 2.288884228906331
+}

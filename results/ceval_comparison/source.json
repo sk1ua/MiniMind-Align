@@ -1,0 +1,463 @@
+{
+  "dataset": "ceval/ceval-exam",
+  "revision": "617524a00b307ff6f9933702f724131fe12ca7ce",
+  "split_policy": "val; if fewer than 20, supplement from dev",
+  "subject_aliases": {
+    "business_ethics": "business_administration"
+  },
+  "datasets_version": "3.6.0",
+  "seed": 42,
+  "questions_per_subject": 20,
+  "subjects": [
+    {
+      "subject": "high_school_chinese",
+      "dataset_config": "high_school_chinese",
+      "splits": {
+        "val": 19,
+        "dev": 5
+      },
+      "selected": [
+        {
+          "split": "dev",
+          "index": 0
+        },
+        {
+          "split": "dev",
+          "index": 1
+        },
+        {
+          "split": "dev",
+          "index": 2
+        },
+        {
+          "split": "dev",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 0
+        },
+        {
+          "split": "val",
+          "index": 1
+        },
+        {
+          "split": "val",
+          "index": 2
+        },
+        {
+          "split": "val",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 6
+        },
+        {
+          "split": "val",
+          "index": 7
+        },
+        {
+          "split": "val",
+          "index": 8
+        },
+        {
+          "split": "val",
+          "index": 9
+        },
+        {
+          "split": "val",
+          "index": 10
+        },
+        {
+          "split": "val",
+          "index": 11
+        },
+        {
+          "split": "val",
+          "index": 12
+        },
+        {
+          "split": "val",
+          "index": 13
+        },
+        {
+          "split": "val",
+          "index": 14
+        },
+        {
+          "split": "val",
+          "index": 16
+        },
+        {
+          "split": "val",
+          "index": 17
+        }
+      ]
+    },
+    {
+      "subject": "high_school_mathematics",
+      "dataset_config": "high_school_mathematics",
+      "splits": {
+        "val": 18,
+        "dev": 5
+      },
+      "selected": [
+        {
+          "split": "dev",
+          "index": 0
+        },
+        {
+          "split": "dev",
+          "index": 1
+        },
+        {
+          "split": "dev",
+          "index": 2
+        },
+        {
+          "split": "dev",
+          "index": 3
+        },
+        {
+          "split": "dev",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 0
+        },
+        {
+          "split": "val",
+          "index": 1
+        },
+        {
+          "split": "val",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 5
+        },
+        {
+          "split": "val",
+          "index": 6
+        },
+        {
+          "split": "val",
+          "index": 7
+        },
+        {
+          "split": "val",
+          "index": 8
+        },
+        {
+          "split": "val",
+          "index": 9
+        },
+        {
+          "split": "val",
+          "index": 10
+        },
+        {
+          "split": "val",
+          "index": 11
+        },
+        {
+          "split": "val",
+          "index": 12
+        },
+        {
+          "split": "val",
+          "index": 13
+        },
+        {
+          "split": "val",
+          "index": 14
+        },
+        {
+          "split": "val",
+          "index": 17
+        }
+      ]
+    },
+    {
+      "subject": "high_school_physics",
+      "dataset_config": "high_school_physics",
+      "splits": {
+        "val": 19,
+        "dev": 5
+      },
+      "selected": [
+        {
+          "split": "dev",
+          "index": 0
+        },
+        {
+          "split": "dev",
+          "index": 1
+        },
+        {
+          "split": "dev",
+          "index": 2
+        },
+        {
+          "split": "dev",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 0
+        },
+        {
+          "split": "val",
+          "index": 1
+        },
+        {
+          "split": "val",
+          "index": 2
+        },
+        {
+          "split": "val",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 6
+        },
+        {
+          "split": "val",
+          "index": 7
+        },
+        {
+          "split": "val",
+          "index": 8
+        },
+        {
+          "split": "val",
+          "index": 9
+        },
+        {
+          "split": "val",
+          "index": 10
+        },
+        {
+          "split": "val",
+          "index": 11
+        },
+        {
+          "split": "val",
+          "index": 12
+        },
+        {
+          "split": "val",
+          "index": 13
+        },
+        {
+          "split": "val",
+          "index": 14
+        },
+        {
+          "split": "val",
+          "index": 16
+        },
+        {
+          "split": "val",
+          "index": 17
+        }
+      ]
+    },
+    {
+      "subject": "computer_network",
+      "dataset_config": "computer_network",
+      "splits": {
+        "val": 19,
+        "dev": 5
+      },
+      "selected": [
+        {
+          "split": "dev",
+          "index": 0
+        },
+        {
+          "split": "dev",
+          "index": 1
+        },
+        {
+          "split": "dev",
+          "index": 2
+        },
+        {
+          "split": "dev",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 0
+        },
+        {
+          "split": "val",
+          "index": 1
+        },
+        {
+          "split": "val",
+          "index": 2
+        },
+        {
+          "split": "val",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 6
+        },
+        {
+          "split": "val",
+          "index": 7
+        },
+        {
+          "split": "val",
+          "index": 8
+        },
+        {
+          "split": "val",
+          "index": 9
+        },
+        {
+          "split": "val",
+          "index": 10
+        },
+        {
+          "split": "val",
+          "index": 11
+        },
+        {
+          "split": "val",
+          "index": 12
+        },
+        {
+          "split": "val",
+          "index": 13
+        },
+        {
+          "split": "val",
+          "index": 14
+        },
+        {
+          "split": "val",
+          "index": 16
+        },
+        {
+          "split": "val",
+          "index": 17
+        }
+      ]
+    },
+    {
+      "subject": "business_ethics",
+      "dataset_config": "business_administration",
+      "splits": {
+        "val": 33
+      },
+      "selected": [
+        {
+          "split": "val",
+          "index": 0
+        },
+        {
+          "split": "val",
+          "index": 1
+        },
+        {
+          "split": "val",
+          "index": 2
+        },
+        {
+          "split": "val",
+          "index": 3
+        },
+        {
+          "split": "val",
+          "index": 4
+        },
+        {
+          "split": "val",
+          "index": 6
+        },
+        {
+          "split": "val",
+          "index": 7
+        },
+        {
+          "split": "val",
+          "index": 8
+        },
+        {
+          "split": "val",
+          "index": 13
+        },
+        {
+          "split": "val",
+          "index": 17
+        },
+        {
+          "split": "val",
+          "index": 18
+        },
+        {
+          "split": "val",
+          "index": 21
+        },
+        {
+          "split": "val",
+          "index": 23
+        },
+        {
+          "split": "val",
+          "index": 24
+        },
+        {
+          "split": "val",
+          "index": 25
+        },
+        {
+          "split": "val",
+          "index": 28
+        },
+        {
+          "split": "val",
+          "index": 29
+        },
+        {
+          "split": "val",
+          "index": 30
+        },
+        {
+          "split": "val",
+          "index": 31
+        },
+        {
+          "split": "val",
+          "index": 32
+        }
+      ]
+    }
+  ],
+  "manifest_sha256": "c9de20dfda989cdc35d9998d0f8ca02b33089926b65f2f5b34aba1e82ff3fc50"
+}

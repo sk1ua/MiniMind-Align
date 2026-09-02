@@ -1,0 +1,8 @@
+{
+  "weight": "full_sft",
+  "data": "dataset\\alignment_v2\\generated\\sft_validation_pilot.jsonl",
+  "batches": 20,
+  "supervised_tokens": 4688,
+  "loss": 0.8156415805220604,
+  "perplexity": 2.2606255805236803
+}

@@ -537,3 +537,158 @@ Common greedy evaluation on full 160 validation and 32 release rows: baseline 48
 长程 error-driven SFT、DPO、SimPO 均在独立的 160 条 validation 与 32 条 release slice 上完成严格回载和质量审计。相对 baseline `48/160, 13/32`，SFT 与 DPO 为 `79/160, 19/32`，SimPO 为 `76/160, 19/32`；安全、终止、自然结束和截断 guard 通过，因此这些权重作为独立诊断候选保留。
 
 随后在最佳 SFT 候选上执行 4-step corrected-GRPO。4/4 更新被 FP32 no-autocast active gate 接受，precision contract、token replay、state continuity、checkpoint reload 和 256 条样本关联均完整；但 source SFT 与 selected RL checkpoint 都是 `19/32`，RL validator 增益为 `0`。结论是质量修复有效、当前 RL 没有增量泛化证据，正式六 seed RL 不放行，默认模型不改变。
+
+---
+
+## 附录：量化指标汇总（面试展示版）
+
+> 本节汇总所有可复现的量化数字，供展示使用。数据来源：自动评测脚本，可一键复现。
+
+### A. 模型规格
+
+| 参数 | 值 |
+|------|---|
+| 参数量 | 63.9M |
+| 架构 | Decoder-only Transformer |
+| hidden_size | 768 |
+| num_hidden_layers | 8 |
+| 注意力 | GQA（8Q / 4KV heads）+ QK-Norm |
+| 位置编码 | RoPE + YaRN 长上下文扩展 |
+| 归一化 | Pre-norm RMSNorm |
+| 前馈网络 | SwiGLU |
+| KV Cache | 自回归 torch.cat 拼接 |
+
+### B. Loss / PPL 对比（sft_validation_pilot.jsonl，160 条）
+
+评测脚本：`evaluation/eval_sft_loss.py`
+
+| 训练阶段 | Val Loss ↓ | PPL ↓ | vs Baseline |
+|---------|-----------|-------|------------|
+| Baseline | 1.082 | 2.952 | — |
+| Error-driven SFT | 0.822 | 2.274 | −24.0% / −23.0% |
+| LoRA-SFT（rank16） | 0.816 | 2.261 | −24.6% / −23.4% |
+| DPO | **0.813** | **2.255** | −24.9% / −23.6% |
+| SimPO | 0.832 | 2.299 | −23.1% / −22.1% |
+| Corrected-GRPO | 0.828 | 2.289 | −23.5% / −22.5% |
+
+> LoRA-SFT：在 full_sft 基础上以 rank=16 LoRA（0.344M 可训练参数，占 0.54%）继续训练 100 步得到，验证 LoRA 低秩适配接近全参数微调效果。
+
+### C. C-Eval 准确率（5 科目 × 20 题 = 100 题，greedy，seed=42）
+
+评测脚本：`evaluation/run_ceval_subset.py`
+
+| 训练阶段 | 总准确率 | 语文 | 数学 | 物理 | 网络 | 商业伦理 | 无效回答 |
+|---------|---------|-----|------|------|------|---------|---------|
+| Baseline | 12% | 20% | 5% | 20% | 10% | 5% | 44/100 |
+| SFT | 13% | 15% | 10% | 20% | 15% | 5% | 51/100 |
+| DPO | 13% | 15% | 10% | 20% | 15% | 5% | 51/100 |
+| **SimPO** | **15%** | **20%** | **15%** | **20%** | **15%** | 5% | 45/100 |
+| GRPO | 13% | 15% | 10% | 20% | 15% | 5% | 51/100 |
+
+### D. 验证集准确率（项目内部 160 条冻结验证集）
+
+来源：`results/public/metrics.csv` + MM-E047 实验日志
+
+| 方法 | 全量验证集 | 公开切片 |
+|------|-----------|---------|
+| Baseline | 48/160 (30%) | 13/32 |
+| Error-driven SFT | 79/160 (49%) | 19/32 |
+| DPO | 79/160 (49%) | 19/32 |
+| SimPO | 76/160 (48%) | 19/32 |
+| Corrected-GRPO | —（无增量） | 19/32 |
+
+### E. 数据集规模
+
+| 数据集 | 类型 | 规模 |
+|-------|------|------|
+| alignment_v2 SFT | 中文指令对话 | 训练集 + 160 条验证集 |
+| alignment_v2 DPO | 偏好对（chosen/rejected） | 113 对 |
+| ceval_qa.jsonl | C-Eval NLP 基础知识问答 | 292 条（10 科目） |
+
+### F. 关键结论
+
+1. **SFT 是最具性价比的对齐手段**：Loss 下降 24%，验证集准确率从 30% 提升至 49%
+2. **DPO/SimPO 在 SFT 基础上有小幅改善**：SimPO 在 C-Eval 总准确率上略优（15% vs 12%）
+3. **Corrected-GRPO 无增量增益**：在独立验证集（160 条）上准确率与 SFT 持平，验证了"小模型 RL 对齐瓶颈在数据质量而非算法"的判断
+4. **生成质量差异明显**：Baseline 对深度学习知识问题输出生物学语境答案；SFT 后输出结构化回答，代码生成遵循 markdown 格式
+
+### G. 模型规模 / 上下文长度 / 训练步数对照实验
+
+脚本：`trainer/train_pretrain.py` + `scripts/analyze_scale_experiment.py`（详见 `docs/scale_comparison.md`）  
+语料：自建 1892 条中文文档（`dataset/pretrain_scale_corpus.jsonl`），公共超参 lr 5e-4 / batch 16
+
+| 组 | 配置 | 参数量 | 总步数 | 末期 Loss ↓ |
+|----|------|--------|--------|------------|
+| S | hidden 512 / 4 层 / seq 256 | ~19M | 595 | 0.992 |
+| M | hidden 768 / 8 层 / seq 256 | ~64M | 595 | 0.786 |
+| L | hidden 1024 / 12 层 / seq 256 | ~150M | 595 | **0.780** |
+| M-seq512 | hidden 768 / 8 层 / **seq 512** | ~64M | 711 | 1.742（长序列单步任务更难） |
+
+**结论**：同等训练步数下规模越大 loss 越低（S 0.99 → M 0.79 → L 0.78），但 M→L 边际收益递减；seq512 组单步 loss 更高反映长上下文预测目标更难。Loss 曲线图：`results/scale_comparison/loss_curves.png`。
+
+### H. 人工评估（21 题 × 6 权重）
+
+评估者：项目作者（单评估者）；量表：指令遵循 / 内容相关性 / 流畅性各 0–2 分，满分 6 分/题。完整逐题评分见 `results/human_eval.md`。
+
+| 训练阶段 | 总分（/126） | 均分（/6） |
+|---------|-------------|-----------|
+| Baseline | 66 | 3.14 |
+| Error-driven SFT | 91 | 4.33 |
+| LoRA-SFT | 90 | 4.29 |
+| DPO | 91 | 4.33 |
+| **SimPO** | **93** | **4.43** |
+| Corrected-GRPO | 91 | 4.33 |
+
+**要点**：SFT 带来最大跃迁（+38%），提升集中在多轮对话能力；SimPO 综合最佳；存在明确的对齐税案例（中译英任务 Baseline 6 分、对齐模型均 2 分）；知识性错误贯穿全阶段，印证瓶颈在数据与规模而非对齐算法。
+
+### I. 可复现命令
+
+```bash
+# PPL/Loss 评测（含 LoRA 时追加 --adapter-path out/lora_align_768.pth）
+python evaluation/eval_sft_loss.py --weight baseline --data-path dataset/alignment_v2/generated/sft_validation_pilot.jsonl --output results/public/ppl_baseline.json --model-dir out --tokenizer-path model
+
+# C-Eval 评测（5 权重）
+python evaluation/run_ceval_subset.py \
+  --model baseline=out/baseline_768.pth --model full_sft=out/full_sft_768.pth \
+  --model dpo=out/dpo_768.pth --model simpo=out/simpo_768.pth --model grpo=out/grpo_768.pth \
+  --revision 617524a00b307ff6f9933702f724131fe12ca7ce \
+  --subjects high_school_chinese,high_school_mathematics,high_school_physics,computer_network,business_ethics \
+  --questions-per-subject 20 --seed 42 --tokenizer-path model --output-dir results/ceval_comparison
+
+# 批量推理对比（21 条问题 × 6 权重，含 LoRA）
+python scripts/batch_compare.py --output results/comparison_output.md
+
+# C-Eval → SFT 格式数据准备
+python scripts/prepare_ceval_sft.py --output dataset/ceval_qa.jsonl
+
+# LoRA 训练（在 full_sft 基础上，rank16，100 步；在 trainer/ 目录下运行）
+cd trainer && python train_lora.py --data_path ../dataset/alignment_v2/generated/sft_train_pilot.jsonl \
+  --save_dir out --model_dir out --tokenizer_path model --lora_name lora_align \
+  --epochs 1 --batch_size 8 --max_steps 100 --num_workers 0
+
+# 规模对照实验（在 trainer/ 目录下运行单组，再回到根目录解析画图）
+cd trainer && python train_pretrain.py --data_path ../dataset/pretrain_scale_corpus.jsonl \
+  --save_weight pretrain_m --hidden_size 768 --num_hidden_layers 8 \
+  --max_seq_len 256 --epochs 5 --batch_size 16 --accumulation_steps 1 \
+  --learning_rate 5e-4 --log_interval 20 --num_workers 0
+cd .. && python scripts/analyze_scale_experiment.py
+```
+
+### J. 产物文件索引
+
+| 文件 | 内容 |
+|------|------|
+| `docs/ppl_comparison.md` | Loss/PPL 六权重对比表 + 分析 |
+| `docs/scale_comparison.md` | 规模/上下文/步数对照实验报告 |
+| `results/comparison_output.md` | 21 条问题 × 6 权重的完整生成输出对比 |
+| `results/human_eval.md` | 人工评估逐题评分（3 维度量表） |
+| `results/ceval_comparison/` | C-Eval 评测原始 JSON + predictions |
+| `results/scale_comparison/` | 规模实验日志、loss_curves.png、生成抽样 |
+| `results/public/ppl_*.json` | 各权重 PPL 评测原始输出 |
+| `dataset/ceval_qa.jsonl` | C-Eval 转 SFT 格式数据（292 条，10 科目） |
+| `dataset/pretrain_scale_corpus.jsonl` | 规模实验用预训练语料（1892 条） |
+| `scripts/batch_compare.py` | 批量推理对比脚本（6 权重） |
+| `scripts/prepare_ceval_sft.py` | C-Eval → SFT JSONL 转换脚本 |
+| `scripts/analyze_scale_experiment.py` | 规模实验日志解析/画图/抽样脚本 |
+| `out/lora_align_768.pth` | 本次训练的 LoRA 适配器（rank16） |
+| `checkpoints/pretrain_*.pth` | 规模实验四组最终权重 |

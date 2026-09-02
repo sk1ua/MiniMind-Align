@@ -1,0 +1,20 @@
+Model Params: 63.91M
+Trainable Params: 63.912M
+Epoch:[1/3](40/237), loss: 3.2285, logits_loss: 3.2285, aux_loss: 0.0000, lr: 0.00049649, epoch_time: 0.0min
+Epoch:[1/3](80/237), loss: 3.3970, logits_loss: 3.3970, aux_loss: 0.0000, lr: 0.00048609, epoch_time: 0.0min
+Epoch:[1/3](120/237), loss: 4.9651, logits_loss: 4.9651, aux_loss: 0.0000, lr: 0.00046911, epoch_time: 0.0min
+Epoch:[1/3](160/237), loss: 2.0748, logits_loss: 2.0748, aux_loss: 0.0000, lr: 0.00044608, epoch_time: 0.0min
+Epoch:[1/3](200/237), loss: 4.7976, logits_loss: 4.7976, aux_loss: 0.0000, lr: 0.00041771, epoch_time: 0.0min
+Epoch:[1/3](237/237), loss: 3.8269, logits_loss: 3.8269, aux_loss: 0.0000, lr: 0.00038750, epoch_time: 0.0min
+Epoch:[2/3](40/237), loss: 3.7946, logits_loss: 3.7946, aux_loss: 0.0000, lr: 0.00035149, epoch_time: 0.0min
+Epoch:[2/3](80/237), loss: 3.9337, logits_loss: 3.9337, aux_loss: 0.0000, lr: 0.00031309, epoch_time: 0.0min
+Epoch:[2/3](120/237), loss: 1.3762, logits_loss: 1.3762, aux_loss: 0.0000, lr: 0.00027351, epoch_time: 0.0min
+Epoch:[2/3](160/237), loss: 0.9784, logits_loss: 0.9784, aux_loss: 0.0000, lr: 0.00023397, epoch_time: 0.0min
+Epoch:[2/3](200/237), loss: 2.4852, logits_loss: 2.4852, aux_loss: 0.0000, lr: 0.00019571, epoch_time: 0.0min
+Epoch:[2/3](237/237), loss: 0.8474, logits_loss: 0.8474, aux_loss: 0.0000, lr: 0.00016250, epoch_time: 0.0min
+Epoch:[3/3](40/237), loss: 1.9922, logits_loss: 1.9922, aux_loss: 0.0000, lr: 0.00012999, epoch_time: 0.0min
+Epoch:[3/3](80/237), loss: 1.9382, logits_loss: 1.9382, aux_loss: 0.0000, lr: 0.00010200, epoch_time: 0.0min
+Epoch:[3/3](120/237), loss: 1.8051, logits_loss: 1.8051, aux_loss: 0.0000, lr: 0.00007940, epoch_time: 0.0min
+Epoch:[3/3](160/237), loss: 0.9948, logits_loss: 0.9948, aux_loss: 0.0000, lr: 0.00006290, epoch_time: 0.0min
+Epoch:[3/3](200/237), loss: 2.3232, logits_loss: 2.3232, aux_loss: 0.0000, lr: 0.00005300, epoch_time: 0.0min
+Epoch:[3/3](237/237), loss: 1.6472, logits_loss: 1.6472, aux_loss: 0.0000, lr: 0.00005000, epoch_time: 0.0min

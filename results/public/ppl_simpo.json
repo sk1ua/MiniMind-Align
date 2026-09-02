@@ -1,0 +1,8 @@
+{
+  "weight": "simpo",
+  "data": "dataset\\alignment_v2\\generated\\sft_validation_pilot.jsonl",
+  "batches": 20,
+  "supervised_tokens": 4706,
+  "loss": 0.832290968298912,
+  "perplexity": 2.298578683678654
+}

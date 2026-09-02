@@ -1,0 +1,294 @@
+{
+  "protocol": {
+    "dataset": "ceval/ceval-exam",
+    "revision": "617524a00b307ff6f9933702f724131fe12ca7ce",
+    "subjects": [
+      "high_school_chinese",
+      "high_school_mathematics",
+      "high_school_physics",
+      "computer_network",
+      "business_ethics"
+    ],
+    "subject_aliases": {
+      "business_ethics": "business_administration"
+    },
+    "questions_per_subject": 20,
+    "total_questions": 100,
+    "seed": 42,
+    "split_policy": "val; if fewer than 20, supplement from dev",
+    "decoding": "greedy",
+    "answer_policy": "first_standalone_A_B_C_D"
+  },
+  "models": [
+    {
+      "model": "baseline",
+      "family": "baseline",
+      "count": 100,
+      "correct": 12,
+      "accuracy": 0.12,
+      "invalid_answers": 44,
+      "subjects": {
+        "business_ethics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 15
+        },
+        "computer_network": {
+          "count": 20,
+          "correct": 2,
+          "accuracy": 0.1,
+          "invalid_answers": 9
+        },
+        "high_school_chinese": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 4
+        },
+        "high_school_mathematics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 14
+        },
+        "high_school_physics": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 2
+        }
+      },
+      "predictions_sha256": "900b6f6a55e0d5f2c7f244849591e73b1f563b61ab22eabea7c576a23aa0dbfe"
+    },
+    {
+      "model": "full_sft",
+      "family": "baseline",
+      "count": 100,
+      "correct": 13,
+      "accuracy": 0.13,
+      "invalid_answers": 51,
+      "subjects": {
+        "business_ethics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 15
+        },
+        "computer_network": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 10
+        },
+        "high_school_chinese": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 8
+        },
+        "high_school_mathematics": {
+          "count": 20,
+          "correct": 2,
+          "accuracy": 0.1,
+          "invalid_answers": 14
+        },
+        "high_school_physics": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 4
+        }
+      },
+      "predictions_sha256": "623feb10b05d2683ea2b95737135f324ae7ec801ae177ad7fc81e25706302473"
+    },
+    {
+      "model": "dpo",
+      "family": "baseline",
+      "count": 100,
+      "correct": 13,
+      "accuracy": 0.13,
+      "invalid_answers": 51,
+      "subjects": {
+        "business_ethics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 15
+        },
+        "computer_network": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 10
+        },
+        "high_school_chinese": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 8
+        },
+        "high_school_mathematics": {
+          "count": 20,
+          "correct": 2,
+          "accuracy": 0.1,
+          "invalid_answers": 14
+        },
+        "high_school_physics": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 4
+        }
+      },
+      "predictions_sha256": "0d3e1d7d7b691eec8cf8d1f5ad23085ce7ea3e422b58f59905379448ab2cc970"
+    },
+    {
+      "model": "simpo",
+      "family": "baseline",
+      "count": 100,
+      "correct": 15,
+      "accuracy": 0.15,
+      "invalid_answers": 45,
+      "subjects": {
+        "business_ethics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 15
+        },
+        "computer_network": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 8
+        },
+        "high_school_chinese": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 7
+        },
+        "high_school_mathematics": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 12
+        },
+        "high_school_physics": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 3
+        }
+      },
+      "predictions_sha256": "b00a7bd3aa9192a1119aa7ab09ffebe437457f5ec4eb80f6cd17ff983fcb2b49"
+    },
+    {
+      "model": "grpo",
+      "family": "grpo",
+      "count": 100,
+      "correct": 13,
+      "accuracy": 0.13,
+      "invalid_answers": 51,
+      "subjects": {
+        "business_ethics": {
+          "count": 20,
+          "correct": 1,
+          "accuracy": 0.05,
+          "invalid_answers": 15
+        },
+        "computer_network": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 10
+        },
+        "high_school_chinese": {
+          "count": 20,
+          "correct": 3,
+          "accuracy": 0.15,
+          "invalid_answers": 8
+        },
+        "high_school_mathematics": {
+          "count": 20,
+          "correct": 2,
+          "accuracy": 0.1,
+          "invalid_answers": 14
+        },
+        "high_school_physics": {
+          "count": 20,
+          "correct": 4,
+          "accuracy": 0.2,
+          "invalid_answers": 4
+        }
+      },
+      "predictions_sha256": "ef78953715cf2c82f0992812f262dc43b9e0b802f103dd28e95e24c735f89b07"
+    }
+  ],
+  "family_aggregates": {
+    "baseline": {
+      "n_models": 4,
+      "models": [
+        "baseline",
+        "full_sft",
+        "dpo",
+        "simpo"
+      ],
+      "accuracy_mean": 0.1325,
+      "accuracy_std": 0.010897247358851683,
+      "subjects": {
+        "business_ethics": {
+          "accuracy_mean": 0.05,
+          "accuracy_std": 0.0
+        },
+        "computer_network": {
+          "accuracy_mean": 0.1375,
+          "accuracy_std": 0.021650635094610963
+        },
+        "high_school_chinese": {
+          "accuracy_mean": 0.175,
+          "accuracy_std": 0.02500000000000001
+        },
+        "high_school_mathematics": {
+          "accuracy_mean": 0.1,
+          "accuracy_std": 0.035355339059327376
+        },
+        "high_school_physics": {
+          "accuracy_mean": 0.2,
+          "accuracy_std": 0.0
+        }
+      }
+    },
+    "grpo": {
+      "n_models": 1,
+      "models": [
+        "grpo"
+      ],
+      "accuracy_mean": 0.13,
+      "accuracy_std": 0.0,
+      "subjects": {
+        "business_ethics": {
+          "accuracy_mean": 0.05,
+          "accuracy_std": 0.0
+        },
+        "computer_network": {
+          "accuracy_mean": 0.15,
+          "accuracy_std": 0.0
+        },
+        "high_school_chinese": {
+          "accuracy_mean": 0.15,
+          "accuracy_std": 0.0
+        },
+        "high_school_mathematics": {
+          "accuracy_mean": 0.1,
+          "accuracy_std": 0.0
+        },
+        "high_school_physics": {
+          "accuracy_mean": 0.2,
+          "accuracy_std": 0.0
+        }
+      }
+    }
+  }
+}
